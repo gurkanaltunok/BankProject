@@ -1,80 +1,33 @@
-﻿using BankProject.Business.DTOs;
-using BankProject.DataAccess;
+﻿using BankProject.Business.Abstract;
 using BankProject.Entities;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
-namespace BankProject.API.Controllers
+[ApiController]
+[Route("api/[controller]")]
+public class UsersController : ControllerBase
 {
-    [Route("api/[controller]")]
-    [ApiController]
-    public class UsersController : ControllerBase
+    private readonly IUserService _userService;
+
+    public UsersController(IUserService userService)
     {
-        private readonly BankDbContext dbContext;
+        _userService = userService;
+    }
 
-        public UsersController(BankDbContext dbContext)
-        {
-            this.dbContext = dbContext;
-        }
+    [HttpGet]
+    public List<User> GetAllUsers()
+    {
+        return _userService.GetAllUsers();
+    }
 
-        [HttpGet]
-        [Route("{id}")]
-        public IActionResult GetUserById(int id)
-        {
-            var user = dbContext.Users.Find(id);
-            if (user == null)
-            {
-                return NotFound();
-            }
-            return Ok(user);
-        }
+    [HttpGet("{id}")]
+    public User Get(int id)
+    {
+        return _userService.GetUserById(id);
+    }
 
-        [HttpDelete]
-        [Route("{id}")]
-        public IActionResult DeleteUserById(int id)
-        {
-            var user = dbContext.Users.Find(id);
-            if (user == null)
-            {
-                return NotFound();
-            }
-            dbContext.Users.Remove(user);
-            dbContext.SaveChanges();
-            return NoContent();
-        }
-
-        [HttpGet]
-        public IActionResult GetAllUsers()
-        {
-            var allUsers = dbContext.Users.ToList();
-            return Ok(allUsers);
-
-        }
-
-        [HttpPost]
-        public IActionResult CreateUser([FromBody] UserDTO createUserDTO)
-        {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-
-            var userEntity = new User()
-            {
-                TCKN = createUserDTO.TCKN,
-                Name = createUserDTO.Name,
-                Surname = createUserDTO.Surname,
-                Email = createUserDTO.Email,
-                Password = createUserDTO.Password,
-                PhoneNumber = createUserDTO.PhoneNumber,
-                Address = createUserDTO.Address,
-                RoleId = 1 // default role for customer
-            };
-
-            dbContext.Users.Add(userEntity);
-            dbContext.SaveChanges();
-
-            return Ok(userEntity);
-        }
+    [HttpPost]
+    public User Post([FromBody] User user)
+    {
+        return _userService.CreateUser(user);
     }
 }

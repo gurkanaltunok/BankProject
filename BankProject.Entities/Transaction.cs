@@ -1,16 +1,10 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using BankProject.Entities.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace BankProject.Entities
 {
-    public enum TransactionType
-    {
-        Deposit,
-        Withdraw,
-        Transfer
-    }
-
     public class Transaction
     {
         [Key, DatabaseGenerated(DatabaseGeneratedOption.Identity)]

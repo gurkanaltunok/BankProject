@@ -1,8 +1,9 @@
-﻿using BankProject.Business.DTOs;
+﻿using BankProject.Business.Abstract;
+using BankProject.Business.DTOs;
+using BankProject.Business.Helpers;
 using BankProject.Entities;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using BankProject.Business.Abstract;
+using Microsoft.AspNetCore.Razor.TagHelpers;
 
 namespace BankProject.API.Controllers
 {
@@ -11,10 +12,12 @@ namespace BankProject.API.Controllers
     public class AccountsController : ControllerBase
     {
         private readonly IAccountService _accountService;
+        private readonly IUserService _userService;
 
-        public AccountsController(IAccountService accountService)
+        public AccountsController(IAccountService accountService, IUserService userService)
         {
             _accountService = accountService;
+            _userService = userService;
         }
 
         [HttpGet("{id}")]
@@ -23,6 +26,7 @@ namespace BankProject.API.Controllers
             var account = _accountService.GetAccountById(id);
             if (account == null)
                 return NotFound();
+
             return Ok(account);
         }
 
@@ -34,36 +38,41 @@ namespace BankProject.API.Controllers
         }
 
         [HttpDelete("{id}")]
-        public IActionResult DeleteAccount(int id)
+        public IActionResult DeleteAccountById(int id)
         {
-            var existingAccount = _accountService.GetAccountById(id);
-            if (existingAccount == null)
+            var account = _accountService.GetAccountById(id);
+            if (account == null)
                 return NotFound();
+
             _accountService.DeleteAccount(id);
             return NoContent();
         }
 
         [HttpPost]
-        public IActionResult Post([FromBody] AccountDTO dto)
+        public IActionResult CreateAccount([FromBody] AccountDTO dto)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
+
+            var user = _userService.GetUserById(dto.UserId);
+            if (user == null)
+                return BadRequest("User not found.");
+
+            string iban = IbanHelper.GenerateIban(dto.UserId);
+
             var account = new Account
             {
                 UserId = dto.UserId,
-                IBAN = GenerateIban(),
                 CurrencyType = dto.CurrencyType,
-                Balance = 0,
                 AccountType = dto.AccountType,
-                DateCreated = DateTime.Now,
+                Balance = 0,
+                IBAN = iban,
+                DateCreated = DateTime.UtcNow,
                 IsActive = true
             };
-            var createdAccount = _accountService.CreateAccount(account);
-            return Ok(createdAccount);
-        }
-        private string GenerateIban()
-        {
-            return $"TR{DateTime.Now.Ticks.ToString().Substring(0, 2)}002240{DateTime.Now.Ticks.ToString().Substring(0, 16)}";
+
+            var created = _accountService.CreateAccount(account);
+            return Ok(created);
         }
 
         [HttpPut("{id}")]

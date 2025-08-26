@@ -20,6 +20,10 @@ builder.Services.AddScoped<IUserService, UserManager>();
 builder.Services.AddScoped<IAccountService, AccountManager>();
 builder.Services.AddScoped<IAccountRepository, AccountRepository>();
 
+builder.Services.AddScoped<ITransactionService, TransactionManager>();
+builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
+
+
 
 // Swagger
 builder.Services.AddEndpointsApiExplorer();

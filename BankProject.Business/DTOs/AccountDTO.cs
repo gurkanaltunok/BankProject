@@ -1,5 +1,4 @@
-﻿using BankProject.Entities;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
@@ -19,5 +18,7 @@ namespace BankProject.Business.DTOs
 
         [Required]
         public AccountType AccountType { get; set; }
+        [Required]
+        public bool IsActive { get; set; } = true;
     }
 }

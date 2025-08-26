@@ -1,9 +1,8 @@
 ﻿using BankProject.Business.DTOs;
-using BankProject.DataAccess;
 using BankProject.Entities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using BankProject.Entities.Enums;
+using BankProject.Business.Abstract;
 
 namespace BankProject.API.Controllers
 {
@@ -11,72 +10,75 @@ namespace BankProject.API.Controllers
     [ApiController]
     public class AccountsController : ControllerBase
     {
-        private readonly BankDbContext dbContext;
+        private readonly IAccountService _accountService;
 
-        public AccountsController(BankDbContext dbContext)
+        public AccountsController(IAccountService accountService)
         {
-            this.dbContext = dbContext;
+            _accountService = accountService;
         }
 
         [HttpGet("{id}")]
         public IActionResult GetAccountById(int id)
         {
-            var account = dbContext.Accounts.Find(id);
+            var account = _accountService.GetAccountById(id);
             if (account == null)
                 return NotFound();
-
             return Ok(account);
         }
 
         [HttpGet]
         public IActionResult GetAllAccounts()
         {
-            var accounts = dbContext.Accounts.ToList();
+            var accounts = _accountService.GetAllAccounts();
             return Ok(accounts);
         }
 
         [HttpDelete("{id}")]
-        public IActionResult DeleteAccountById(int id)
+        public IActionResult DeleteAccount(int id)
         {
-            var account = dbContext.Accounts.Find(id);
-            if (account == null)
+            var existingAccount = _accountService.GetAccountById(id);
+            if (existingAccount == null)
                 return NotFound();
-
-            dbContext.Accounts.Remove(account);
-            dbContext.SaveChanges();
+            _accountService.DeleteAccount(id);
             return NoContent();
         }
 
         [HttpPost]
-        public IActionResult CreateAccount([FromBody] AccountDTO dto)
+        public IActionResult Post([FromBody] AccountDTO dto)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
-
-            var user = dbContext.Users.Find(dto.UserId);
-            if (user == null)
-                return BadRequest("User not found.");
-
-
-            string iban = GenerateIban(dto.CurrencyType.ToString());
-
             var account = new Account
             {
                 UserId = dto.UserId,
+                IBAN = GenerateIban(),
                 CurrencyType = dto.CurrencyType,
-                AccountType = dto.AccountType,
                 Balance = 0,
-                IBAN = iban
+                AccountType = dto.AccountType,
+                DateCreated = DateTime.Now,
+                IsActive = true
             };
-
-            dbContext.Accounts.Add(account);
-            dbContext.SaveChanges();
-
-            return Ok(account);
+            var createdAccount = _accountService.CreateAccount(account);
+            return Ok(createdAccount);
         }
-        private string GenerateIban(string currency)
+        private string GenerateIban()
         {
-            return $"TR{DateTime.Now.Ticks.ToString().Substring(0, 16)}{currency.ToUpper()}";
+            return $"TR{DateTime.Now.Ticks.ToString().Substring(0, 2)}002240{DateTime.Now.Ticks.ToString().Substring(0, 16)}";
+        }
+
+        [HttpPut("{id}")]
+        public IActionResult Put(int id, [FromBody] AccountDTO dto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+            var existingAccount = _accountService.GetAccountById(id);
+            if (existingAccount == null)
+                return NotFound();
+            existingAccount.CurrencyType = dto.CurrencyType;
+            existingAccount.AccountType = dto.AccountType;
+            existingAccount.IsActive = dto.IsActive;
+            var updatedAccount = _accountService.UpdateAccount(existingAccount);
+            return Ok(updatedAccount);
         }
     }
 }

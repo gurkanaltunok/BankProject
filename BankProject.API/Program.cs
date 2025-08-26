@@ -1,9 +1,9 @@
-using Microsoft.EntityFrameworkCore;
-using BankProject.DataAccess;
-using BankProject.DataAccess.Concrete;
-using BankProject.DataAccess.Abstract;
-
 using BankProject.Business.Abstract;
+using BankProject.Business.Concrete;
+using BankProject.DataAccess;
+using BankProject.DataAccess.Abstract;
+using BankProject.DataAccess.Concrete;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,6 +16,9 @@ builder.Services.AddDbContext<BankDbContext>(options =>
 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IUserService, UserManager>();
+
+builder.Services.AddScoped<IAccountService, AccountManager>();
+builder.Services.AddScoped<IAccountRepository, AccountRepository>();
 
 
 // Swagger

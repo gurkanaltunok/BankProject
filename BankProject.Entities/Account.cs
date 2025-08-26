@@ -32,6 +32,8 @@ namespace BankProject.Entities
 
         [ForeignKey("User")]
         public int UserId { get; set; }
+        [Required]
+        public bool IsActive { get; set; } = true;
     }
 }
 

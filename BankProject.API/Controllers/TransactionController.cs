@@ -24,7 +24,7 @@ namespace BankProject.API.Controllers
             try
             {
                 _transactionService.Deposit(dto.AccountId, dto.Amount, dto.Description);
-                return Ok(new { Message = "Deposit successful" });
+                return Ok(new { Message = "Para yatırma başarılı" });
             }
             catch (Exception ex)
             {
@@ -41,7 +41,7 @@ namespace BankProject.API.Controllers
             try
             {
                 _transactionService.Withdraw(dto.AccountId, dto.Amount, dto.Description);
-                return Ok(new { Message = "Withdraw successful" });
+                return Ok(new { Message = "Para çekme başarılı" });
             }
             catch (Exception ex)
             {
@@ -57,14 +57,15 @@ namespace BankProject.API.Controllers
 
             try
             {
-                _transactionService.Transfer(dto);
-                return Ok(new { Message = "Transfer successful" });
+                _transactionService.Transfer(dto.FromAccountId, dto.ToAccountId, dto.Amount, dto.Description);
+                return Ok(new { Message = "Transfer başarılı" });
             }
             catch (Exception ex)
             {
                 return BadRequest(ex.Message);
             }
         }
+
 
         [HttpGet("account/{accountId}")]
         public IActionResult GetTransactionsByAccountId(int accountId)

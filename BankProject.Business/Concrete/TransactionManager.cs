@@ -1,115 +1,108 @@
 ﻿using BankProject.Business.Abstract;
-using BankProject.Business.DTOs;
 using BankProject.DataAccess.Abstract;
 using BankProject.Entities;
 using BankProject.Entities.Enums;
+using System;
+using System.Collections.Generic;
 
 namespace BankProject.Business.Concrete
 {
     public class TransactionManager : ITransactionService
     {
-        private readonly ITransactionRepository _transactionRepo;
-        private readonly IAccountRepository _accountRepo;
+        private readonly ITransactionRepository _transactionRepository;
+        private readonly IAccountRepository _accountRepository;
 
-        public TransactionManager(ITransactionRepository transactionRepo, IAccountRepository accountRepo)
+        public TransactionManager(ITransactionRepository transactionRepository, IAccountRepository accountRepository)
         {
-            _transactionRepo = transactionRepo;
-            _accountRepo = accountRepo;
+            _transactionRepository = transactionRepository;
+            _accountRepository = accountRepository;
         }
 
-        public Transaction CreateTransaction(Transaction transaction)
+        public Transaction Deposit(int accountId, decimal amount, string description)
         {
-            return _transactionRepo.AddTransaction(transaction);
+            var account = _accountRepository.GetAccountById(accountId);
+            if (account == null || !account.IsActive)
+                throw new Exception("Hesap bulunamadı");
+
+            account.Balance += amount;
+            _accountRepository.UpdateAccount(account);
+
+            var transaction = new Transaction
+            {
+                AccountId = accountId,
+                Amount = amount,
+                Description = description,
+                TransactionType = TransactionType.Deposit,
+                TransactionDate = DateTime.UtcNow
+            };
+
+            return _transactionRepository.AddTransaction(transaction);
+        }
+
+        public Transaction Withdraw(int accountId, decimal amount, string description)
+        {
+            var account = _accountRepository.GetAccountById(accountId);
+            if (account == null || !account.IsActive)
+                throw new Exception("Hesap bulunamadı");
+            if (account.Balance < amount)
+                throw new Exception("Yetersiz bakiye");
+
+            account.Balance -= amount;
+            _accountRepository.UpdateAccount(account);
+
+            var transaction = new Transaction
+            {
+                AccountId = accountId,
+                Amount = amount,
+                Description = description,
+                TransactionType = TransactionType.Withdraw,
+                TransactionDate = DateTime.UtcNow
+            };
+
+            return _transactionRepository.AddTransaction(transaction);
+        }
+
+        public Transaction Transfer(int fromAccountId, int toAccountId, decimal amount, string description)
+        {
+            var fromAccount = _accountRepository.GetAccountById(fromAccountId);
+            var toAccount = _accountRepository.GetAccountById(toAccountId);
+
+            if (fromAccount == null || toAccount == null)
+                throw new Exception("Hesap bulunamadı");
+
+            if (!fromAccount.IsActive || !toAccount.IsActive)
+                throw new Exception("Alıcı veya gönderici hesap aktif değil");
+
+            if (fromAccount.CurrencyType != toAccount.CurrencyType ||
+                fromAccount.AccountType != toAccount.AccountType)
+                throw new Exception("Alıcı hesap tipi uyuşmadı");
+
+            if (fromAccount.Balance < amount)
+                throw new Exception("Yetersiz bakiye");
+
+            fromAccount.Balance -= amount;
+            toAccount.Balance += amount;
+
+            var transaction = new Transaction
+            {
+                TransactionType = TransactionType.Transfer,
+                Amount = amount,
+                AccountId = fromAccountId,
+                TargetAccountId = toAccountId,
+                Description = description,
+                TransactionDate = DateTime.UtcNow
+            };
+
+            _accountRepository.UpdateAccount(fromAccount);
+            _accountRepository.UpdateAccount(toAccount);
+            _transactionRepository.AddTransaction(transaction);
+
+            return transaction;
         }
 
         public List<Transaction> GetTransactionsByAccountId(int accountId)
         {
-            return _transactionRepo.GetTransactionsByAccountId(accountId);
-        }
-
-        public bool Transfer(TransferDTO dto)
-        {
-            var fromAccount = _accountRepo.GetAccountById(dto.FromAccountId);
-            var toAccount = _accountRepo.GetAccountById(dto.ToAccountId);
-
-            if (fromAccount == null || toAccount == null)
-                throw new Exception("Hesap bulunamadı.");
-
-            if (fromAccount.Balance < dto.Amount)
-                throw new Exception("Yetersiz bakiye.");
-
-            fromAccount.Balance -= dto.Amount;
-            toAccount.Balance += dto.Amount;
-
-            _accountRepo.UpdateAccount(fromAccount);
-            _accountRepo.UpdateAccount(toAccount);
-
-            _transactionRepo.AddTransaction(new Transaction
-            {
-                AccountId = fromAccount.AccountId,
-                TransactionType = TransactionType.Transfer,
-                Amount = dto.Amount,
-                TransactionDate = DateTime.UtcNow,
-                Description = $"Transfer to account {toAccount.AccountId}",
-                TargetAccountId = toAccount.AccountId
-            });
-
-            _transactionRepo.AddTransaction(new Transaction
-            {
-                AccountId = toAccount.AccountId,
-                TransactionType = TransactionType.Deposit,
-                Amount = dto.Amount,
-                TransactionDate = DateTime.UtcNow,
-                Description = $"Transfer from account {fromAccount.AccountId}",
-                TargetAccountId = fromAccount.AccountId
-            });
-
-            return true;
-        }
-
-        public bool Deposit(int accountId, decimal amount, string description = "")
-        {
-            var account = _accountRepo.GetAccountById(accountId);
-            if (account == null)
-                throw new Exception("Hesap bulunamadı.");
-
-            account.Balance += amount;
-            _accountRepo.UpdateAccount(account);
-
-            _transactionRepo.AddTransaction(new Transaction
-            {
-                AccountId = account.AccountId,
-                TransactionType = TransactionType.Deposit,
-                Amount = amount,
-                TransactionDate = DateTime.UtcNow,
-                Description = description
-            });
-
-            return true;
-        }
-
-        public bool Withdraw(int accountId, decimal amount, string description = "")
-        {
-            var account = _accountRepo.GetAccountById(accountId);
-            if (account == null)
-                throw new Exception("Hesap bulunamadı.");
-
-            if (account.Balance < amount)
-                throw new Exception("Yetersiz bakiye.");
-
-            account.Balance -= amount;
-            _accountRepo.UpdateAccount(account);
-
-            _transactionRepo.AddTransaction(new Transaction
-            {
-                AccountId = account.AccountId,
-                TransactionType = TransactionType.Withdraw,
-                Amount = amount,
-                TransactionDate = DateTime.UtcNow,
-                Description = description
-            });
-
-            return true;
+            return _transactionRepository.GetTransactionsByAccountId(accountId);
         }
     }
 }

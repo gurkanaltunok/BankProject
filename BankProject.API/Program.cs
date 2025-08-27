@@ -28,6 +28,14 @@ builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
 // Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    {
+        Title = "BankProject API",
+        Version = "v1"
+    });
+});
 
 var app = builder.Build();
 

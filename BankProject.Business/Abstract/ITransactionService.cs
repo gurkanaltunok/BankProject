@@ -1,16 +1,13 @@
-﻿using BankProject.Business.DTOs;
-using BankProject.Entities;
+﻿using BankProject.Entities;
 using System.Collections.Generic;
 
 namespace BankProject.Business.Abstract
 {
     public interface ITransactionService
     {
-        Transaction CreateTransaction(Transaction transaction);
+        Transaction Deposit(int accountId, decimal amount, string description);
+        Transaction Withdraw(int accountId, decimal amount, string description);
+        Transaction Transfer(int fromAccountId, int toAccountId, decimal amount, string description);
         List<Transaction> GetTransactionsByAccountId(int accountId);
-
-        bool Deposit(int accountId, decimal amount, string description = "");
-        bool Withdraw(int accountId, decimal amount, string description = "");
-        bool Transfer(TransferDTO transferDto);
     }
 }

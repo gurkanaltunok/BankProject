@@ -27,7 +27,7 @@ namespace BankProject.API.Controllers
             if (account == null)
                 return NotFound();
 
-            return Ok(account);
+            return Ok(account); 
         }
 
         [HttpGet]
@@ -40,13 +40,14 @@ namespace BankProject.API.Controllers
         [HttpDelete("{id}")]
         public IActionResult DeleteAccountById(int id)
         {
-            var account = _accountService.GetAccountById(id);
-            if (account == null)
+            var existingAccount = _accountService.GetAccountById(id);
+            if (existingAccount == null)
                 return NotFound();
 
             _accountService.DeleteAccount(id);
-            return NoContent();
+            return Ok(new { Message = "Hesap kapatıldı." });
         }
+
 
         [HttpPost]
         public IActionResult CreateAccount([FromBody] AccountDTO dto)
@@ -56,7 +57,7 @@ namespace BankProject.API.Controllers
 
             var user = _userService.GetUserById(dto.UserId);
             if (user == null)
-                return BadRequest("User not found.");
+                return BadRequest("Kullanıcı bulunamadı.");
 
             string iban = IbanHelper.GenerateIban(dto.UserId);
 
@@ -89,5 +90,7 @@ namespace BankProject.API.Controllers
             var updatedAccount = _accountService.UpdateAccount(existingAccount);
             return Ok(updatedAccount);
         }
+
+
     }
 }

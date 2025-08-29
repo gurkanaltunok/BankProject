@@ -14,6 +14,10 @@ namespace BankProject.DataAccess.Abstract
         User CreateUser(User user);
         User UpdateUser(User user);
         void DeleteUser(int id);
+        void ChangePassword(int userId, byte[] newHash, byte[] newSalt);
+
+        User? GetByTCKN(string tckn);
+
 
     }
 }

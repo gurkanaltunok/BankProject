@@ -41,9 +41,7 @@ namespace BankProject.DataAccess.Concrete
         {
             var user = _context.Users.Find(id);
             if (user == null)
-            {
                 throw new Exception("User not found");
-            }
             return user;
         }
 
@@ -51,13 +49,11 @@ namespace BankProject.DataAccess.Concrete
         {
             var existingUser = _context.Users.Find(user.Id);
             if (existingUser == null)
-            {
                 throw new Exception("User not found");
-            }
 
+            existingUser.TCKN = user.TCKN;
             existingUser.Name = user.Name;
             existingUser.Surname = user.Surname;
-            existingUser.Password = user.Password;
             existingUser.Email = user.Email;
             existingUser.Address = user.Address;
             existingUser.PhoneNumber = user.PhoneNumber;
@@ -65,6 +61,23 @@ namespace BankProject.DataAccess.Concrete
 
             _context.SaveChanges();
             return existingUser;
+        }
+
+        public User? GetByTCKN(string tckn)
+        {
+            return _context.Users.FirstOrDefault(u => u.TCKN == tckn);
+        }
+
+        public void ChangePassword(int userId, byte[] passwordHash, byte[] passwordSalt)
+        {
+            var user = _context.Users.Find(userId);
+            if (user == null)
+                throw new Exception("User not found");
+
+            user.PasswordHash = passwordHash;
+            user.PasswordSalt = passwordSalt;
+
+            _context.SaveChanges();
         }
     }
 }

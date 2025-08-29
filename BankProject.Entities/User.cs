@@ -20,8 +20,11 @@ namespace BankProject.Entities
         [Required, EmailAddress, MaxLength(100)]
         public string Email { get; set; } = string.Empty;
 
-        [Required, MaxLength(50)]
-        public string Password { get; set; } = string.Empty;
+        [Required]
+        public byte[] PasswordHash { get; set; } = null!;
+
+        [Required]
+        public byte[] PasswordSalt { get; set; } = null!;
 
         [Required, MaxLength(10), MinLength(10)]
         public string PhoneNumber { get; set; } = string.Empty;

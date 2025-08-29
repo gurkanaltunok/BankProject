@@ -1,4 +1,5 @@
-﻿using BankProject.Entities;
+﻿using BankProject.Business.DTOs;
+using BankProject.Entities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,8 +12,10 @@ namespace BankProject.Business.Abstract
     {
         List<User> GetAllUsers();
         User GetUserById(int id);
-        User CreateUser(User user);
+        User CreateUser(User user, string password);
         User UpdateUser(User user);
         void DeleteUser(int id);
+        void ChangePassword(int userId, string newPassword);
+        string Login(LoginDTO dto);
     }
 }

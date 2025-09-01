@@ -27,7 +27,7 @@ namespace BankProject.API.Controllers
             if (account == null)
                 return NotFound();
 
-            return Ok(account); 
+            return Ok(account);
         }
 
         [HttpGet]
@@ -42,11 +42,15 @@ namespace BankProject.API.Controllers
         {
             var existingAccount = _accountService.GetAccountById(id);
             if (existingAccount == null)
-                return NotFound();
+                return NotFound(new { Message = "Hesap bulunamadı." });
 
-            _accountService.DeleteAccount(id);
-            return Ok(new { Message = "Hesap kapatıldı." });
+            var result = _accountService.DeleteAccount(id);
+            if (!result)
+                return BadRequest(new { Message = "Hesap kapatma işlemi başarısız." });
+
+            return Ok(new { Message = "Hesap başarıyla kapatıldı." });
         }
+
 
 
         [HttpPost]
@@ -90,7 +94,5 @@ namespace BankProject.API.Controllers
             var updatedAccount = _accountService.UpdateAccount(existingAccount);
             return Ok(updatedAccount);
         }
-
-
     }
 }

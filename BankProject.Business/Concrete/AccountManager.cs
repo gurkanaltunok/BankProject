@@ -21,10 +21,12 @@ namespace BankProject.Business.Concrete
             return _accountRepository.CreateAccount(account);
         }
 
-        public void DeleteAccount(int id)
+        public bool DeleteAccount(int id)
         {
-            _accountRepository.DeleteAccount(id);
+            return _accountRepository.DeleteAccount(id);
         }
+
+
 
         public Account GetAccountById(int id)
         {

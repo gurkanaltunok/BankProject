@@ -13,6 +13,6 @@ namespace BankProject.Business.Abstract
         Account GetAccountById(int id);
         Account CreateAccount(Account account);
         Account UpdateAccount(Account account);
-        void DeleteAccount(int id);
+        bool DeleteAccount(int id);
     }
 }

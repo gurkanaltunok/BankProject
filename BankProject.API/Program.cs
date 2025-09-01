@@ -15,7 +15,10 @@ builder.Services.AddControllers();
 
 // DbContext dependency injection
 builder.Services.AddDbContext<BankDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(
+        builder.Configuration.GetConnectionString("DefaultConnection"),
+        b => b.MigrationsAssembly("BankProject.DataAccess")
+    ));
 
 // Dependency injections
 builder.Services.AddScoped<IUserRepository, UserRepository>();
@@ -40,7 +43,7 @@ builder.Services.AddSwaggerGen(c =>
     c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
     {
         In = Microsoft.OpenApi.Models.ParameterLocation.Header,
-        Description = "Lütfen 'Bearer {token}' formatýnda giriniz.",
+        Description = "Lï¿½tfen 'Bearer {token}' formatï¿½nda giriniz.",
         Name = "Authorization",
         Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
         Scheme = "Bearer"
@@ -62,7 +65,7 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// ? JWT Authentication (tek seferde)
+// JWT Authentication
 var jwtKey = builder.Configuration["Jwt:Key"];
 if (string.IsNullOrEmpty(jwtKey))
 {
@@ -95,7 +98,6 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-// ? Middleware sýrasý önemli
 app.UseAuthentication();
 app.UseAuthorization();
 

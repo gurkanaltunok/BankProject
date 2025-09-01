@@ -12,6 +12,6 @@ namespace BankProject.DataAccess.Abstract
         Entities.Account GetAccountById(int id);
         Entities.Account CreateAccount(Entities.Account account);
         Entities.Account UpdateAccount(Entities.Account account);
-        void DeleteAccount(int id);
+        bool DeleteAccount(int id);
     }
 }

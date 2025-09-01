@@ -22,16 +22,17 @@ namespace BankProject.DataAccess.Concrete
             return account;
         }
 
-        public void DeleteAccount(int id)
+        public bool DeleteAccount(int id)
         {
             var account = _context.Accounts.Find(id);
             if (account != null)
             {
                 account.IsActive = false;
                 _context.SaveChanges();
+                return true;
             }
+            return false;
         }
-
 
         public Account GetAccountById(int id)
         {
@@ -39,6 +40,7 @@ namespace BankProject.DataAccess.Concrete
             if (account == null)
             {
                 throw new Exception("Hesap bulunamadı");
+                
             }
             return account;
         }

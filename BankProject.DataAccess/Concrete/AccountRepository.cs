@@ -39,7 +39,7 @@ namespace BankProject.DataAccess.Concrete
             var account = _context.Accounts.Find(id);
             if (account == null)
             {
-                throw new Exception("Hesap bulunamadı");
+                throw new Exception("Hesap bulunamadı.");
                 
             }
             return account;
@@ -55,7 +55,7 @@ namespace BankProject.DataAccess.Concrete
             var existingAccount = _context.Accounts.Find(account.AccountId);
             if (existingAccount == null)
             {
-                throw new Exception("Hesap bulunamadı");
+                throw new Exception("Hesap bulunamadı.");
             }
             existingAccount.Balance = account.Balance;
             existingAccount.CurrencyType = account.CurrencyType;

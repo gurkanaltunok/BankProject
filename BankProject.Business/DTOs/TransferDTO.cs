@@ -16,7 +16,7 @@
             [Required]
             public int ToAccountId { get; set; }
 
-            [Required, Range(1, double.MaxValue, ErrorMessage = "Amount must be greater than zero.")]
+            [Required, Range(1, double.MaxValue, ErrorMessage = "Miktar sıfırdan büyük olmalı.")]
             public decimal Amount { get; set; }
 
             public string Description { get; set; } = string.Empty;

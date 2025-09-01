@@ -11,11 +11,11 @@ namespace BankProject.Business.DTOs
     public class LoginDTO
     {
         [Required]
-        [RegularExpression(@"^\d{11}$", ErrorMessage = "TCKN must be exactly 11 digits.")]
+        [RegularExpression(@"^\d{11}$", ErrorMessage = "TCKN 11 haneli olmalı.")]
         public string TCKN { get; set; } = string.Empty;
 
         [Required]
-        [MinLength(6, ErrorMessage = "Password must be at least 6 characters.")]
+        [MinLength(6, ErrorMessage = "Şifre en az 6 karakter olmalı.")]
         public string Password { get; set; } = string.Empty;
     }
 }

@@ -24,7 +24,7 @@ namespace BankProject.API.Controllers
             try
             {
                 _transactionService.Deposit(dto.AccountId, dto.Amount, dto.Description);
-                return Ok(new { Message = "Para yatırma başarılı" });
+                return Ok(new { Message = "Para yatırma başarılı." });
             }
             catch (Exception ex)
             {
@@ -41,7 +41,7 @@ namespace BankProject.API.Controllers
             try
             {
                 _transactionService.Withdraw(dto.AccountId, dto.Amount, dto.Description);
-                return Ok(new { Message = "Para çekme başarılı" });
+                return Ok(new { Message = "Para çekme başarılı." });
             }
             catch (Exception ex)
             {
@@ -58,7 +58,7 @@ namespace BankProject.API.Controllers
             try
             {
                 _transactionService.Transfer(dto.FromAccountId, dto.ToAccountId, dto.Amount, dto.Description);
-                return Ok(new { Message = "Transfer başarılı" });
+                return Ok(new { Message = "Transfer başarılı." });
             }
             catch (Exception ex)
             {

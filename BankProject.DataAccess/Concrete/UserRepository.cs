@@ -41,7 +41,7 @@ namespace BankProject.DataAccess.Concrete
         {
             var user = _context.Users.Find(id);
             if (user == null)
-                throw new Exception("User not found");
+                throw new Exception("Kullanıcı bulunamadı.");
             return user;
         }
 
@@ -49,7 +49,7 @@ namespace BankProject.DataAccess.Concrete
         {
             var existingUser = _context.Users.Find(user.Id);
             if (existingUser == null)
-                throw new Exception("User not found");
+                throw new Exception("Kullanıcı bulunamadı.");
 
             existingUser.TCKN = user.TCKN;
             existingUser.Name = user.Name;
@@ -72,7 +72,7 @@ namespace BankProject.DataAccess.Concrete
         {
             var user = _context.Users.Find(userId);
             if (user == null)
-                throw new Exception("User not found");
+                throw new Exception("Kullanıcı bulunamadı.");
 
             user.PasswordHash = passwordHash;
             user.PasswordSalt = passwordSalt;

@@ -14,7 +14,6 @@ public class UsersController : ControllerBase
         _userService = userService;
     }
 
-    // ✅ Tüm kullanıcıları getir
     [HttpGet]
     public IActionResult GetAllUsers()
     {
@@ -22,7 +21,6 @@ public class UsersController : ControllerBase
         return Ok(users);
     }
 
-    // ✅ ID ile kullanıcı getir
     [HttpGet("{id}")]
     public IActionResult GetUserById(int id)
     {
@@ -33,7 +31,7 @@ public class UsersController : ControllerBase
         return Ok(user);
     }
 
-    // ✅ Kayıt (Register)
+
     [HttpPost("register")]
     public IActionResult Register([FromBody] UserRegisterDTO dto)
     {
@@ -48,14 +46,13 @@ public class UsersController : ControllerBase
             Email = dto.Email,
             PhoneNumber = dto.PhoneNumber,
             Address = dto.Address,
-            RoleId = 1 // default müşteri
+            RoleId = 1
         };
 
         var createdUser = _userService.CreateUser(user, dto.Password);
         return Ok(createdUser);
     }
 
-    // ✅ Güncelleme
     [HttpPut("{id}")]
     public IActionResult Update(int id, [FromBody] UserUpdateDTO dto)
     {
@@ -77,7 +74,6 @@ public class UsersController : ControllerBase
         return Ok(updatedUser);
     }
 
-    // ✅ Silme
     [HttpDelete("{id}")]
     public IActionResult Delete(int id)
     {
@@ -89,14 +85,13 @@ public class UsersController : ControllerBase
         return NoContent();
     }
 
-    // ✅ Login
     [HttpPost("login")]
     public IActionResult Login([FromBody] LoginDTO dto)
     {
         try
         {
             var token = _userService.Login(dto);
-            return Ok(new { Message = "Login successful", Token = token });
+            return Ok(new { Message = "Giriş başarılı", Token = token });
         }
         catch (Exception ex)
         {
@@ -104,14 +99,13 @@ public class UsersController : ControllerBase
         }
     }
 
-    // ✅ Şifre Değiştirme
     [HttpPost("change-password")]
     public IActionResult ChangePassword([FromBody] ChangePasswordDTO dto)
     {
         try
         {
             _userService.ChangePassword(dto.UserId, dto.NewPassword);
-            return Ok(new { Message = "Password updated successfully" });
+            return Ok(new { Message = "Şifre başarıyla güncellendi." });
         }
         catch (Exception ex)
         {

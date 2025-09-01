@@ -22,7 +22,7 @@ namespace BankProject.Business.Concrete
         {
             var account = _accountRepository.GetAccountById(accountId);
             if (account == null || !account.IsActive)
-                throw new Exception("Hesap bulunamadı");
+                throw new Exception("Hesap bulunamadı.");
 
             account.Balance += amount;
             _accountRepository.UpdateAccount(account);
@@ -43,9 +43,9 @@ namespace BankProject.Business.Concrete
         {
             var account = _accountRepository.GetAccountById(accountId);
             if (account == null || !account.IsActive)
-                throw new Exception("Hesap bulunamadı");
+                throw new Exception("Hesap bulunamadı.");
             if (account.Balance < amount)
-                throw new Exception("Yetersiz bakiye");
+                throw new Exception("Yetersiz bakiye.");
 
             account.Balance -= amount;
             _accountRepository.UpdateAccount(account);
@@ -68,17 +68,17 @@ namespace BankProject.Business.Concrete
             var toAccount = _accountRepository.GetAccountById(toAccountId);
 
             if (fromAccount == null || toAccount == null)
-                throw new Exception("Hesap bulunamadı");
+                throw new Exception("Hesap bulunamadı.");
 
             if (!fromAccount.IsActive || !toAccount.IsActive)
-                throw new Exception("Alıcı veya gönderici hesap aktif değil");
+                throw new Exception("Alıcı veya gönderici hesap aktif değil.");
 
             if (fromAccount.CurrencyType != toAccount.CurrencyType ||
                 fromAccount.AccountType != toAccount.AccountType)
-                throw new Exception("Alıcı hesap tipi uyuşmadı");
+                throw new Exception("Alıcı hesap tipi uyuşmadı.");
 
             if (fromAccount.Balance < amount)
-                throw new Exception("Yetersiz bakiye");
+                throw new Exception("Yetersiz bakiye.");
 
             fromAccount.Balance -= amount;
             toAccount.Balance += amount;

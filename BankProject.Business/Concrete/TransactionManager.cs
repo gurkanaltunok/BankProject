@@ -1,9 +1,9 @@
-﻿using BankProject.Business.Abstract;
+﻿using System;
+using System.Collections.Generic;
+using BankProject.Business.Abstract;
 using BankProject.DataAccess.Abstract;
 using BankProject.Entities;
 using BankProject.Entities.Enums;
-using System;
-using System.Collections.Generic;
 
 namespace BankProject.Business.Concrete
 {
@@ -42,32 +42,61 @@ namespace BankProject.Business.Concrete
         public Transaction Withdraw(int accountId, decimal amount, string description)
         {
             var account = _accountRepository.GetAccountById(accountId);
+            var bankAccount = _accountRepository.GetAccountById(1); // Banka kasası
+
             if (account == null || !account.IsActive)
                 throw new Exception("Hesap bulunamadı.");
-            if (account.Balance < amount)
+
+            if (bankAccount == null || !bankAccount.IsActive)
+                throw new Exception("Banka hesabı bulunamadı.");
+
+            decimal fee = amount * 0.02m;
+            decimal totalDebit = amount + fee;
+
+            if (account.Balance < totalDebit)
                 throw new Exception("Yetersiz bakiye.");
 
-            account.Balance -= amount;
-            _accountRepository.UpdateAccount(account);
+            account.Balance -= totalDebit;
+            bankAccount.Balance += fee;
 
-            var transaction = new Transaction
+            _accountRepository.UpdateAccount(account);
+            _accountRepository.UpdateAccount(bankAccount);
+
+            // Kullanıcının çekme işlemi
+            var withdrawTransaction = new Transaction
             {
                 AccountId = accountId,
                 Amount = amount,
+                Fee = fee,
                 Description = description,
                 TransactionType = TransactionType.Withdraw,
                 TransactionDate = DateTime.UtcNow
             };
+            _transactionRepository.AddTransaction(withdrawTransaction);
 
-            return _transactionRepository.AddTransaction(transaction);
+            // Banka kasasına gönderilen fee
+            var bankFeeTransaction = new Transaction
+            {
+                AccountId = bankAccount.AccountId,
+                Amount = fee,
+                Fee = 0,
+                Description = $"İşlem Ücreti - Hesap {accountId}",
+                TransactionType = TransactionType.Deposit,
+                TransactionDate = DateTime.UtcNow,
+                TargetAccountId = accountId
+            };
+            _transactionRepository.AddTransaction(bankFeeTransaction);
+
+            return withdrawTransaction;
         }
 
         public Transaction Transfer(int fromAccountId, int toAccountId, decimal amount, string description)
         {
             var fromAccount = _accountRepository.GetAccountById(fromAccountId);
             var toAccount = _accountRepository.GetAccountById(toAccountId);
+            var bankAccount = _accountRepository.GetAccountById(1); // Banka kasası
 
-            if (fromAccount == null || toAccount == null)
+            if (fromAccount == null || toAccount == null || bankAccount == null)
                 throw new Exception("Hesap bulunamadı.");
 
             if (!fromAccount.IsActive || !toAccount.IsActive)
@@ -77,28 +106,49 @@ namespace BankProject.Business.Concrete
                 fromAccount.AccountType != toAccount.AccountType)
                 throw new Exception("Alıcı hesap tipi uyuşmadı.");
 
-            if (fromAccount.Balance < amount)
+            decimal fee = amount * 0.02m;
+            decimal totalDebit = amount + fee;
+
+            if (fromAccount.Balance < totalDebit)
                 throw new Exception("Yetersiz bakiye.");
 
-            fromAccount.Balance -= amount;
+            fromAccount.Balance -= totalDebit;
             toAccount.Balance += amount;
+            bankAccount.Balance += fee;
 
-            var transaction = new Transaction
+            _accountRepository.UpdateAccount(fromAccount);
+            _accountRepository.UpdateAccount(toAccount);
+            _accountRepository.UpdateAccount(bankAccount);
+
+            // Gönderenin transfer transaction'ı
+            var transferTransaction = new Transaction
             {
                 TransactionType = TransactionType.Transfer,
                 Amount = amount,
+                Fee = fee,
                 AccountId = fromAccountId,
                 TargetAccountId = toAccountId,
                 Description = description,
                 TransactionDate = DateTime.UtcNow
             };
+            _transactionRepository.AddTransaction(transferTransaction);
 
-            _accountRepository.UpdateAccount(fromAccount);
-            _accountRepository.UpdateAccount(toAccount);
-            _transactionRepository.AddTransaction(transaction);
+            // Banka kasasına gönderilen fee transaction'ı
+            var bankFeeTransaction = new Transaction
+            {
+                TransactionType = TransactionType.Deposit,
+                Amount = fee,
+                Fee = 0,
+                AccountId = bankAccount.AccountId,
+                TargetAccountId = fromAccountId,
+                Description = $"Transfer ücreti: {description}",
+                TransactionDate = DateTime.UtcNow
+            };
+            _transactionRepository.AddTransaction(bankFeeTransaction);
 
-            return transaction;
+            return transferTransaction;
         }
+
 
         public List<Transaction> GetTransactionsByAccountId(int accountId)
         {

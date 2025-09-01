@@ -26,8 +26,6 @@ namespace BankProject.Business.Concrete
             return _accountRepository.DeleteAccount(id);
         }
 
-
-
         public Account GetAccountById(int id)
         {
             return _accountRepository.GetAccountById(id);

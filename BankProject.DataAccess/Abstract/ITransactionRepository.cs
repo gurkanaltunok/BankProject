@@ -7,6 +7,6 @@ namespace BankProject.DataAccess.Abstract
     {
         Transaction AddTransaction(Transaction transaction);
         List<Transaction> GetTransactionsByAccountId(int accountId);
-        List<Transaction> GetByDateRange(DateTime? startDate, DateTime? endDate);
+        List<Transaction> GetTransactionsByDateRange(DateTime? startDate, DateTime? endDate, int? accountId);
     }
 }

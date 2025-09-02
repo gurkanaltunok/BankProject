@@ -151,9 +151,19 @@ namespace BankProject.Business.Concrete
             return _transactionRepository.GetTransactionsByAccountId(accountId);
         }
 
-        public List<Transaction> GetTransactionsByDateRange(DateTime? startDate, DateTime? endDate)
+        public List<Transaction> GetTransactionsByDateRange(DateTime? startDate, DateTime? endDate, int? accountId)
         {
-            return _transactionRepository.GetByDateRange(startDate, endDate);
+            return _transactionRepository.GetTransactionsByDateRange(startDate, endDate, accountId);
         }
+
+        public bool CheckAccountOwner(int accountId, int userId)
+        {
+            var account = _accountRepository.GetAccountById(accountId);
+            if (account == null)
+                throw new Exception("Hesap bulunamadı.");
+
+            return account.UserId == userId;
+        }
+
     }
 }

@@ -7,6 +7,7 @@ namespace BankProject.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class TransactionsController : ControllerBase
     {
         private readonly ITransactionService _transactionService;
@@ -16,6 +17,12 @@ namespace BankProject.API.Controllers
             _transactionService = transactionService;
         }
 
+        private int GetUserId() =>
+            int.Parse(User.Claims.First(c => c.Type == "UserId").Value);
+
+        private int GetRoleId() =>
+            int.Parse(User.Claims.First(c => c.Type == "RoleId").Value);
+
         [HttpPost("deposit")]
         public IActionResult Deposit([FromBody] DepositWithdrawDTO dto)
         {
@@ -24,6 +31,13 @@ namespace BankProject.API.Controllers
 
             try
             {
+                int userId = GetUserId();
+                int roleId = GetRoleId();
+
+                // Eğer admin değilse, sadece kendi hesabına işlem yapabilir
+                if (roleId != 2 && !_transactionService.CheckAccountOwner(dto.AccountId, userId))
+                    return Forbid("Bu hesaba erişim yetkiniz yok.");
+
                 _transactionService.Deposit(dto.AccountId, dto.Amount, dto.Description);
                 return Ok(new { Message = "Para yatırma başarılı." });
             }
@@ -41,6 +55,12 @@ namespace BankProject.API.Controllers
 
             try
             {
+                int userId = GetUserId();
+                int roleId = GetRoleId();
+
+                if (roleId != 2 && !_transactionService.CheckAccountOwner(dto.AccountId, userId))
+                    return Forbid("Bu hesaba erişim yetkiniz yok.");
+
                 _transactionService.Withdraw(dto.AccountId, dto.Amount, dto.Description);
                 return Ok(new { Message = "Para çekme başarılı." });
             }
@@ -58,6 +78,13 @@ namespace BankProject.API.Controllers
 
             try
             {
+                int userId = GetUserId();
+                int roleId = GetRoleId();
+
+                // Gönderen hesabın sahibi kontrol ediliyor
+                if (roleId != 2 && !_transactionService.CheckAccountOwner(dto.FromAccountId, userId))
+                    return Forbid("Bu hesaba erişim yetkiniz yok.");
+
                 _transactionService.Transfer(dto.FromAccountId, dto.ToAccountId, dto.Amount, dto.Description);
                 return Ok(new { Message = "Transfer başarılı." });
             }
@@ -67,18 +94,32 @@ namespace BankProject.API.Controllers
             }
         }
 
-        [Authorize]
         [HttpGet("account/{accountId}")]
         public IActionResult GetTransactionsByAccountId(int accountId)
         {
+            int userId = GetUserId();
+            int roleId = GetRoleId();
+
+            if (roleId != 2 && !_transactionService.CheckAccountOwner(accountId, userId))
+                return Forbid("Bu hesaba erişim yetkiniz yok.");
+
             var transactions = _transactionService.GetTransactionsByAccountId(accountId);
             return Ok(transactions);
         }
 
         [HttpGet("filter")]
-        public IActionResult GetTransactionsByDateRange([FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate)
+        public IActionResult GetTransactionsByDateRange([FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate, [FromQuery] int? accountId = null)
         {
-            var transactions = _transactionService.GetTransactionsByDateRange(startDate, endDate);
+            int userId = GetUserId();
+            int roleId = GetRoleId();
+
+            if (accountId.HasValue)
+            {
+                if (roleId != 2 && !_transactionService.CheckAccountOwner(accountId.Value, userId))
+                    return Forbid("Bu hesaba erişim yetkiniz yok.");
+            }
+
+            var transactions = _transactionService.GetTransactionsByDateRange(startDate, endDate, accountId);
             return Ok(transactions);
         }
     }

@@ -27,5 +27,18 @@ namespace BankProject.DataAccess.Concrete
                            .Where(t => t.AccountId == accountId)
                            .ToList();
         }
+
+        public List<Transaction> GetByDateRange(DateTime? startDate, DateTime? endDate)
+        {
+            var query = _context.Transactions.AsQueryable();
+
+            if (startDate.HasValue)
+                query = query.Where(t => t.TransactionDate >= startDate.Value);
+
+            if (endDate.HasValue)
+                query = query.Where(t => t.TransactionDate <= endDate.Value);
+
+            return query.OrderByDescending(t => t.TransactionDate).ToList();
+        }
     }
 }

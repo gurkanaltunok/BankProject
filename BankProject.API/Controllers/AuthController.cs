@@ -1,10 +1,12 @@
-﻿using BankProject.DataAccess;
+﻿using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
+using BankProject.Business.DTOs;
+using BankProject.Business.Helpers;
+using BankProject.DataAccess;
 using BankProject.Entities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
 
 namespace BankProject.API.Controllers
 {
@@ -22,14 +24,50 @@ namespace BankProject.API.Controllers
         }
 
         [HttpPost("register")]
-        public IActionResult Register([FromBody] User user)
+        public IActionResult Register([FromBody] UserRegisterDTO dto)
         {
-            if (_context.Users.Any(u => u.TCKN == user.TCKN))
+            if (_context.Users.Any(u => u.TCKN == dto.TCKN))
                 return BadRequest("TCKN zaten mevcut.");
+
+            PasswordHelper.CreatePasswordHash(dto.Password, out byte[] passwordHash, out byte[] passwordSalt);
+
+            var user = new User
+            {
+                TCKN = dto.TCKN,
+                Name = dto.Name,
+                Surname = dto.Surname,
+                Email = dto.Email,
+                Address = dto.Address,
+                PhoneNumber = dto.PhoneNumber,
+                PasswordHash = passwordHash,
+                PasswordSalt = passwordSalt,
+                RoleId = 1 // Normal kullanıcı
+            };
 
             _context.Users.Add(user);
             _context.SaveChanges();
+
             return Ok("Kullanıcı başarıyla kayıt oldu.");
+        }
+
+        [HttpPost("login")]
+        public IActionResult Login([FromBody] LoginDTO dto)
+        {
+            if (string.IsNullOrEmpty(dto.TCKN) || string.IsNullOrEmpty(dto.Password))
+                return BadRequest("TCKN ve şifre gereklidir.");
+
+            var user = _context.Users.FirstOrDefault(u => u.TCKN == dto.TCKN);
+            if (user == null || !PasswordHelper.VerifyPasswordHash(dto.Password, user.PasswordHash, user.PasswordSalt))
+                return Unauthorized("Geçersiz TCKN veya şifre.");
+
+            var token = GenerateJwtToken(user);
+
+            return Ok(new
+            {
+                Token = token,
+                UserId = user.Id,
+                RoleId = user.RoleId
+            });
         }
 
         private string GenerateJwtToken(User user)
@@ -39,12 +77,14 @@ namespace BankProject.API.Controllers
                 throw new InvalidOperationException("JWT key is not configured.");
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
+
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
             var claims = new[]
             {
                 new Claim(JwtRegisteredClaimNames.Sub, user.TCKN),
-                new Claim("role", user.RoleId.ToString())
+                new Claim("UserId", user.Id.ToString()),
+                new Claim("RoleId", user.RoleId.ToString())
             };
 
             var token = new JwtSecurityToken(
@@ -57,11 +97,5 @@ namespace BankProject.API.Controllers
 
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
-    }
-
-    public class LoginDTO
-    {
-        public string TCKN { get; set; } = string.Empty;
-        public string Password { get; set; } = string.Empty;
     }
 }

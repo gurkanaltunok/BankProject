@@ -1,5 +1,6 @@
 ﻿using BankProject.Business.Abstract;
 using BankProject.Business.DTOs;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BankProject.API.Controllers
@@ -66,11 +67,18 @@ namespace BankProject.API.Controllers
             }
         }
 
-
+        [Authorize]
         [HttpGet("account/{accountId}")]
         public IActionResult GetTransactionsByAccountId(int accountId)
         {
             var transactions = _transactionService.GetTransactionsByAccountId(accountId);
+            return Ok(transactions);
+        }
+
+        [HttpGet("filter")]
+        public IActionResult GetTransactionsByDateRange([FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate)
+        {
+            var transactions = _transactionService.GetTransactionsByDateRange(startDate, endDate);
             return Ok(transactions);
         }
     }

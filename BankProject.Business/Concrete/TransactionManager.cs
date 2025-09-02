@@ -42,7 +42,7 @@ namespace BankProject.Business.Concrete
         public Transaction Withdraw(int accountId, decimal amount, string description)
         {
             var account = _accountRepository.GetAccountById(accountId);
-            var bankAccount = _accountRepository.GetAccountById(1); // Banka kasası
+            var bankAccount = _accountRepository.GetAccountById(1); // Bank account
 
             if (account == null || !account.IsActive)
                 throw new Exception("Hesap bulunamadı.");
@@ -62,7 +62,6 @@ namespace BankProject.Business.Concrete
             _accountRepository.UpdateAccount(account);
             _accountRepository.UpdateAccount(bankAccount);
 
-            // Kullanıcının çekme işlemi
             var withdrawTransaction = new Transaction
             {
                 AccountId = accountId,
@@ -74,7 +73,6 @@ namespace BankProject.Business.Concrete
             };
             _transactionRepository.AddTransaction(withdrawTransaction);
 
-            // Banka kasasına gönderilen fee
             var bankFeeTransaction = new Transaction
             {
                 AccountId = bankAccount.AccountId,
@@ -94,7 +92,7 @@ namespace BankProject.Business.Concrete
         {
             var fromAccount = _accountRepository.GetAccountById(fromAccountId);
             var toAccount = _accountRepository.GetAccountById(toAccountId);
-            var bankAccount = _accountRepository.GetAccountById(1); // Banka kasası
+            var bankAccount = _accountRepository.GetAccountById(1); // Bank account
 
             if (fromAccount == null || toAccount == null || bankAccount == null)
                 throw new Exception("Hesap bulunamadı.");
@@ -120,7 +118,6 @@ namespace BankProject.Business.Concrete
             _accountRepository.UpdateAccount(toAccount);
             _accountRepository.UpdateAccount(bankAccount);
 
-            // Gönderenin transfer transaction'ı
             var transferTransaction = new Transaction
             {
                 TransactionType = TransactionType.Transfer,
@@ -133,7 +130,6 @@ namespace BankProject.Business.Concrete
             };
             _transactionRepository.AddTransaction(transferTransaction);
 
-            // Banka kasasına gönderilen fee transaction'ı
             var bankFeeTransaction = new Transaction
             {
                 TransactionType = TransactionType.Deposit,
@@ -153,6 +149,11 @@ namespace BankProject.Business.Concrete
         public List<Transaction> GetTransactionsByAccountId(int accountId)
         {
             return _transactionRepository.GetTransactionsByAccountId(accountId);
+        }
+
+        public List<Transaction> GetTransactionsByDateRange(DateTime? startDate, DateTime? endDate)
+        {
+            return _transactionRepository.GetByDateRange(startDate, endDate);
         }
     }
 }

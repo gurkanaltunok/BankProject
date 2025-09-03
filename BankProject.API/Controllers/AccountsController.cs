@@ -96,3 +96,48 @@ namespace BankProject.API.Controllers
         }
     }
 }
+
+//    [Client / Postman / Frontend]
+//                 |
+//                 v
+//       ┌─────────────────────┐
+//       │   AuthController    │   (API Layer)
+//       │  /api/auth/login    │
+//       │  /api/auth/register │
+//       └─────────────────────┘
+//                 |
+//                 v
+//       ┌─────────────────────┐
+//       │    IAuthService     │   (Business Contract)
+//       │ (interface)         │
+//       └─────────────────────┘
+//                 |
+//                 v
+//       ┌─────────────────────┐
+//       │    AuthManager      │   (Business Logic)
+//       │ - Register()        │
+//       │ - Login()           │
+//       │ - GenerateToken()   │
+//       └─────────────────────┘
+//                 |
+//         uses ↓   ↑ returns DTO
+//                 |
+//       ┌─────────────────────┐
+//       │   IUserRepository   │   (DataAccess Contract)
+//       │ (interface)         │
+//       └─────────────────────┘
+//                 |
+//                 v
+//       ┌─────────────────────┐
+//       │   UserRepository    │   (DataAccess Impl)
+//       │ - GetByTCKN()       │
+//       │ - CreateUser()      │
+//       │ - UpdateUser()      │
+//       └─────────────────────┘
+//                 |
+//                 v
+//       ┌─────────────────────┐
+//       │    BankDbContext    │   (EF Core / DB Layer)
+//       │   Users Table       │
+//       └─────────────────────┘
+

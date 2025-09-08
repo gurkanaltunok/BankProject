@@ -1,0 +1,24 @@
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using BankProject.Entities.Enums;
+
+namespace BankProject.Business.DTOs
+{
+    public class AccountDTO
+    {
+        [Required]
+        public int UserId { get; set; }
+
+        [Required]
+        public string CurrencyType { get; set; } = string.Empty;
+
+        [Required]
+        public string AccountType { get; set; } = string.Empty;
+        [Required]
+        public bool IsActive { get; set; } = true;
+    }
+}

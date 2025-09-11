@@ -22,6 +22,7 @@
 /Users/gurkan/Documents/BankProject2/BankProject.Entities/obj/Debug/net8.0/BankProject.Entities.AssemblyInfoInputs.cache
 /Users/gurkan/Documents/BankProject2/BankProject.Entities/obj/Debug/net8.0/BankProject.Entities.AssemblyInfo.cs
 /Users/gurkan/Documents/BankProject2/BankProject.Entities/obj/Debug/net8.0/BankProject.Entities.csproj.CoreCompileInputs.cache
+/Users/gurkan/Documents/BankProject2/BankProject.Entities/obj/Debug/net8.0/BankProject.Entities.sourcelink.json
 /Users/gurkan/Documents/BankProject2/BankProject.Entities/obj/Debug/net8.0/BankProject.Entities.dll
 /Users/gurkan/Documents/BankProject2/BankProject.Entities/obj/Debug/net8.0/refint/BankProject.Entities.dll
 /Users/gurkan/Documents/BankProject2/BankProject.Entities/obj/Debug/net8.0/BankProject.Entities.pdb

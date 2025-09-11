@@ -17,6 +17,8 @@ namespace BankProject.Entities
         public decimal Amount { get; set; }
         [Precision(18, 2)]
         public decimal? Fee { get; set; } = 0;
+        [Precision(18, 2)]
+        public decimal? BalanceAfter { get; set; }
         public DateTime TransactionDate { get; set; } = DateTime.UtcNow;
         [ForeignKey("Account")]
         public int AccountId { get; set; }

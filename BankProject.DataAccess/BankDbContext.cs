@@ -13,6 +13,7 @@ namespace BankProject.DataAccess
         public DbSet<Role> Roles { get; set; } = null!;
         public DbSet<Account> Accounts { get; set; } = null!;
         public DbSet<Transaction> Transactions { get; set; } = null!;
+        public DbSet<BalanceHistory> BalanceHistories { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -33,15 +34,27 @@ namespace BankProject.DataAccess
 
             modelBuilder.Entity<Account>()
                 .Property(a => a.CurrencyType)
-                .HasConversion<string>();
+                .HasConversion<int>();
 
             modelBuilder.Entity<Account>()
                 .Property(a => a.AccountType)
-                .HasConversion<string>();
+                .HasConversion<int>();
 
 
             modelBuilder.Entity<Transaction>()
                 .Property(t => t.Amount)
+                .HasPrecision(18, 2);
+
+            modelBuilder.Entity<BalanceHistory>()
+                .Property(b => b.Balance)
+                .HasPrecision(18, 2);
+
+            modelBuilder.Entity<BalanceHistory>()
+                .Property(b => b.PreviousBalance)
+                .HasPrecision(18, 2);
+
+            modelBuilder.Entity<BalanceHistory>()
+                .Property(b => b.ChangeAmount)
                 .HasPrecision(18, 2);
 
             modelBuilder.Entity<User>()

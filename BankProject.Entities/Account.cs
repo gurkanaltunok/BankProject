@@ -16,16 +16,16 @@ namespace BankProject.Entities
         public int AccountId { get; set; }
 
         [Required]
-        public string CurrencyType { get; set; } = string.Empty;
+        public CurrencyType CurrencyType { get; set; }
 
         [Required]
-        public string AccountType { get; set; } = string.Empty;
+        public AccountType AccountType { get; set; }
 
         [Required, Precision(18, 2)]
         public decimal Balance { get; set; } = 0;
 
         [Required, StringLength(26)]
-        public string IBAN { get; set; } = string.Empty;
+        public string IBAN { get; set; }
 
         [Required]
         public DateTime DateCreated { get; set; } = DateTime.UtcNow;

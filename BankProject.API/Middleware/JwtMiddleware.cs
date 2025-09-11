@@ -55,15 +55,12 @@ namespace BankProject.API.Middleware
                 var userId = jwtToken.Claims.First(x => x.Type == "UserId").Value;
                 var roleId = jwtToken.Claims.First(x => x.Type == "RoleId").Value;
 
-                // Add user info to context
                 context.Items["UserId"] = userId;
                 context.Items["RoleId"] = roleId;
             }
             catch (Exception ex)
             {
-                // Token validation failed
                 Console.WriteLine($"JWT validation failed: {ex.Message}");
-                // Don't throw exception, let the authorization attributes handle it
             }
         }
     }

@@ -43,6 +43,9 @@ builder.Services.AddScoped<IAccountRepository, AccountRepository>();
 builder.Services.AddScoped<ITransactionService, TransactionManager>();
 builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
 
+builder.Services.AddScoped<IBalanceHistoryService, BalanceHistoryManager>();
+builder.Services.AddScoped<IBalanceHistoryRepository, BalanceHistoryRepository>();
+
 builder.Services.AddScoped<IAuthService, AuthManager>();
 
 // Swagger

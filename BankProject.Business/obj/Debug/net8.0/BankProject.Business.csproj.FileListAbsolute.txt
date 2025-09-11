@@ -28,6 +28,7 @@
 /Users/gurkan/Documents/BankProject2/BankProject.Business/obj/Debug/net8.0/BankProject.Business.AssemblyInfoInputs.cache
 /Users/gurkan/Documents/BankProject2/BankProject.Business/obj/Debug/net8.0/BankProject.Business.AssemblyInfo.cs
 /Users/gurkan/Documents/BankProject2/BankProject.Business/obj/Debug/net8.0/BankProject.Business.csproj.CoreCompileInputs.cache
+/Users/gurkan/Documents/BankProject2/BankProject.Business/obj/Debug/net8.0/BankProject.Business.sourcelink.json
 /Users/gurkan/Documents/BankProject2/BankProject.Business/obj/Debug/net8.0/BankProj.B6906700.Up2Date
 /Users/gurkan/Documents/BankProject2/BankProject.Business/obj/Debug/net8.0/BankProject.Business.dll
 /Users/gurkan/Documents/BankProject2/BankProject.Business/obj/Debug/net8.0/refint/BankProject.Business.dll

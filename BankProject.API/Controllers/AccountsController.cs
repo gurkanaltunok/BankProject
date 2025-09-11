@@ -2,6 +2,7 @@
 using BankProject.Business.DTOs;
 using BankProject.Business.Helpers;
 using BankProject.Entities;
+using BankProject.Entities.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Razor.TagHelpers;
@@ -43,7 +44,7 @@ namespace BankProject.API.Controllers
         [Microsoft.AspNetCore.Authorization.Authorize]
         public IActionResult GetMyAccounts()
         {
-            // JWT token'dan user ID'yi al
+            // JWT tokenden user ID al
             var userIdClaim = User.FindFirst("UserId");
             if (userIdClaim == null)
                 return Unauthorized();
@@ -100,8 +101,8 @@ namespace BankProject.API.Controllers
             var account = new Account
             {
                 UserId = dto.UserId,
-                CurrencyType = dto.CurrencyType,
-                AccountType = dto.AccountType,
+                CurrencyType = (CurrencyType)int.Parse(dto.CurrencyType),
+                AccountType = (AccountType)int.Parse(dto.AccountType),
                 Balance = 0,
                 IBAN = iban,
                 DateCreated = DateTime.UtcNow,
@@ -120,8 +121,8 @@ namespace BankProject.API.Controllers
             var existingAccount = _accountService.GetAccountById(id);
             if (existingAccount == null)
                 return NotFound();
-            existingAccount.CurrencyType = dto.CurrencyType;
-            existingAccount.AccountType = dto.AccountType;
+            existingAccount.CurrencyType = (CurrencyType)int.Parse(dto.CurrencyType);
+            existingAccount.AccountType = (AccountType)int.Parse(dto.AccountType);
             existingAccount.IsActive = dto.IsActive;
             var updatedAccount = _accountService.UpdateAccount(existingAccount);
             return Ok(updatedAccount);

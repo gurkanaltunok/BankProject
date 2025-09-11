@@ -115,8 +115,6 @@ namespace BankProject.API.Controllers
             }
             else
             {
-                // Eğer accountId verilmemişse, kullanıcının tüm hesaplarının işlemlerini getir
-                // Bu durumda sadece o kullanıcıya ait hesapların işlemleri döndürülür
                 Console.WriteLine("No accountId provided, getting all user transactions");
             }
 

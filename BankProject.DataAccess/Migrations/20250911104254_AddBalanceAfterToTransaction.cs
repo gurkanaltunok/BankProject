@@ -5,26 +5,25 @@
 namespace BankProject.DataAccess.Migrations
 {
     /// <inheritdoc />
-    public partial class AddTransactionFee : Migration
+    public partial class AddBalanceAfterToTransaction : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.AddColumn<decimal>(
-                name: "Fee",
+                name: "BalanceAfter",
                 table: "Transactions",
                 type: "decimal(18,2)",
                 precision: 18,
                 scale: 2,
-                nullable: false,
-                defaultValue: 0m);
+                nullable: true);
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropColumn(
-                name: "Fee",
+                name: "BalanceAfter",
                 table: "Transactions");
         }
     }

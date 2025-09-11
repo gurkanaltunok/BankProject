@@ -12,11 +12,13 @@ namespace BankProject.Business.Concrete
     {
         private readonly ITransactionRepository _transactionRepository;
         private readonly IAccountRepository _accountRepository;
+        private readonly IBalanceHistoryService _balanceHistoryService;
 
-        public TransactionManager(ITransactionRepository transactionRepository, IAccountRepository accountRepository)
+        public TransactionManager(ITransactionRepository transactionRepository, IAccountRepository accountRepository, IBalanceHistoryService balanceHistoryService)
         {
             _transactionRepository = transactionRepository;
             _accountRepository = accountRepository;
+            _balanceHistoryService = balanceHistoryService;
         }
 
         private Account GetActiveAccount(int accountId)
@@ -29,7 +31,7 @@ namespace BankProject.Business.Concrete
 
         private Account GetBankAccount() => GetActiveAccount(1); // Banka AccountId = 1
 
-        private Transaction AddTransaction(int accountId, int? targetAccountId, decimal amount, decimal fee, int type, string description)
+        private Transaction AddTransaction(int accountId, int? targetAccountId, decimal amount, decimal fee, int type, string description, decimal? balanceAfter = null)
         {
             var transaction = new Transaction
             {
@@ -39,7 +41,8 @@ namespace BankProject.Business.Concrete
                 Fee = fee,
                 TransactionType = type,
                 Description = description,
-                TransactionDate = DateTime.UtcNow
+                TransactionDate = DateTime.UtcNow,
+                BalanceAfter = balanceAfter
             };
 
             return _transactionRepository.AddTransaction(transaction);
@@ -49,10 +52,14 @@ namespace BankProject.Business.Concrete
         public TransactionDTO Deposit(int accountId, decimal amount, string description)
         {
             var account = GetActiveAccount(accountId);
+            var previousBalance = account.Balance;
             account.Balance += amount;
             _accountRepository.UpdateAccount(account);
 
-            var transaction = AddTransaction(accountId, null, amount, 0, 0, description);
+            var transaction = AddTransaction(accountId, null, amount, 0, (int)TransactionType.Deposit, description, account.Balance);
+            
+            // Bakiye geçmişini kaydet
+            _balanceHistoryService.RecordBalanceChange(accountId, previousBalance, account.Balance, amount, "Deposit", description, transaction.TransactionId);
             return new TransactionDTO
             {
                 TransactionId = transaction.TransactionId,
@@ -79,14 +86,21 @@ namespace BankProject.Business.Concrete
             if (account.Balance < totalDebit)
                 throw new Exception("Yetersiz bakiye.");
 
+            var previousBalance = account.Balance;
+            var bankPreviousBalance = bank.Balance;
+            
             account.Balance -= totalDebit;
             bank.Balance += fee;
 
             _accountRepository.UpdateAccount(account);
             _accountRepository.UpdateAccount(bank);
 
-            var withdrawTransaction = AddTransaction(accountId, null, amount, fee, 1, description);
-            AddTransaction(bank.AccountId, accountId, fee, 0, 0, $"İşlem Ücreti - Hesap {accountId}");
+            var withdrawTransaction = AddTransaction(accountId, null, amount, fee, (int)TransactionType.Withdraw, description, account.Balance);
+            var feeTransaction = AddTransaction(bank.AccountId, accountId, fee, 0, (int)TransactionType.Fee, $"İşlem Ücreti - Hesap {accountId}", bank.Balance);
+            
+            // Bakiye geçmişini kaydet
+            _balanceHistoryService.RecordBalanceChange(accountId, previousBalance, account.Balance, -totalDebit, "Withdraw", description, withdrawTransaction.TransactionId);
+            _balanceHistoryService.RecordBalanceChange(bank.AccountId, bankPreviousBalance, bank.Balance, fee, "Fee", $"İşlem Ücreti - Hesap {accountId}", feeTransaction.TransactionId);
 
             return new TransactionDTO
             {
@@ -134,9 +148,10 @@ namespace BankProject.Business.Concrete
                 TargetAccountId = toAccountId,
                 Amount = amount,
                 Fee = fee,
-                TransactionType = 2,
+                TransactionType = (int)TransactionType.Transfer,
                 Description = description,
-                TransactionDate = DateTime.UtcNow
+                TransactionDate = DateTime.UtcNow,
+                BalanceAfter = fromAccount.Balance
             };
 
             var createdTransaction = _transactionRepository.AddTransaction(transferTransaction);

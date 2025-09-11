@@ -24,7 +24,8 @@ namespace BankProject.DataAccess.Concrete
         public List<Transaction> GetTransactionsByAccountId(int accountId)
         {
             return _context.Transactions
-                           .Where(t => t.AccountId == accountId)
+                           .Where(t => t.AccountId == accountId || t.TargetAccountId == accountId)
+                           .OrderByDescending(t => t.TransactionDate)
                            .ToList();
         }
 

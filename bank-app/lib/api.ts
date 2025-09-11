@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5022/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5020/api';
 
 // API Response types
 interface ApiResponse<T = any> {
@@ -253,10 +253,22 @@ class ApiService {
   // Account methods
   async createAccount(accountData: AccountDto): Promise<Account> {
     console.log('Creating account with data:', accountData);
+    
+    // Backend expects AccountDTO directly with string values
+    const requestData = {
+      UserId: accountData.UserId,
+      CurrencyType: accountData.CurrencyType.toString(),
+      AccountType: accountData.AccountType.toString(),
+      IsActive: accountData.IsActive
+    };
+    
     const response = await fetch(`${API_BASE_URL}/accounts`, {
       method: 'POST',
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify(accountData),
+      headers: {
+        ...this.getAuthHeaders(),
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestData),
     });
 
     console.log('Create account response status:', response.status);
@@ -398,24 +410,32 @@ class ApiService {
   }
 
   async getTransactionsByAccount(accountId: number): Promise<Transaction[]> {
+    console.log('API getTransactionsByAccount called with accountId:', accountId);
     const response = await fetch(`${API_BASE_URL}/transactions/account/${accountId}`, {
       headers: this.getAuthHeaders(),
     });
 
+    console.log('API getTransactionsByAccount response status:', response.status);
     const data = await this.handleResponse<any[]>(response);
+    console.log('API getTransactionsByAccount raw data:', data);
+    console.log('First transaction keys:', data[0] ? Object.keys(data[0]) : 'No data');
+    console.log('First transaction values:', data[0] ? Object.values(data[0]) : 'No data');
     
-    // Backend'den gelen PascalCase veriyi frontend camelCase formatına çevir
-    return data.map(transaction => ({
-      id: transaction.TransactionId,
-      accountId: transaction.AccountId,
-      transactionType: transaction.TransactionType,
-      amount: transaction.Amount,
-      description: transaction.Description,
-      transactionDate: transaction.TransactionDate,
-      balanceAfter: transaction.BalanceAfter,
-      fee: transaction.Fee,
-      targetAccountId: transaction.TargetAccountId,
+    // Backend'den gelen veriyi frontend formatına çevir
+    const mappedData = data.map(transaction => ({
+      id: transaction.transactionId,
+      accountId: transaction.accountId,
+      transactionType: transaction.transactionType,
+      amount: transaction.amount,
+      description: transaction.description,
+      transactionDate: transaction.transactionDate,
+      balanceAfter: transaction.balanceAfter,
+      fee: transaction.fee,
+      targetAccountId: transaction.targetAccountId,
     }));
+    
+    console.log('API getTransactionsByAccount mapped data:', mappedData);
+    return mappedData;
   }
 
   async getTransactionsByDateRange(
@@ -428,14 +448,22 @@ class ApiService {
     if (endDate) params.append('endDate', endDate);
     if (accountId) params.append('accountId', accountId.toString());
 
+    console.log('getTransactionsByDateRange API call:', {
+      startDate,
+      endDate,
+      accountId,
+      url: `${API_BASE_URL}/transactions/filter?${params.toString()}`
+    });
+
     const response = await fetch(`${API_BASE_URL}/transactions/filter?${params.toString()}`, {
       headers: this.getAuthHeaders(),
     });
 
     const data = await this.handleResponse<any[]>(response);
+    console.log('getTransactionsByDateRange raw response:', data);
     
     // Backend'den gelen camelCase veriyi frontend formatına çevir
-    return data.map(transaction => ({
+    const mappedData = data.map(transaction => ({
       id: transaction.transactionId,
       accountId: transaction.accountId,
       transactionType: transaction.transactionType,
@@ -446,10 +474,69 @@ class ApiService {
       fee: transaction.fee,
       targetAccountId: transaction.targetAccountId,
     }));
+    
+    console.log('getTransactionsByDateRange mapped data:', mappedData);
+    return mappedData;
+  }
+
+  async updateUser(userData: {
+    name: string;
+    surname: string;
+    email: string;
+    phoneNumber: string;
+    address: string;
+    tckn: string;
+  }): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}/users/update`, {
+      method: 'PUT',
+      headers: {
+        ...this.getAuthHeaders(),
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        Name: userData.name,
+        Surname: userData.surname,
+        Email: userData.email,
+        PhoneNumber: userData.phoneNumber,
+        Address: userData.address,
+        TCKN: userData.tckn,
+      }),
+    });
+
+    return await this.handleResponse<any>(response);
+  }
+
+  // Balance History methods
+  async getBalanceHistoryByAccount(accountId: number): Promise<any[]> {
+    const response = await fetch(`${API_BASE_URL}/balancehistory/account/${accountId}`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    return await this.handleResponse<any[]>(response);
+  }
+
+  async getBalanceHistoryByDateRange(accountId: number, startDate: string, endDate: string): Promise<any[]> {
+    const response = await fetch(`${API_BASE_URL}/balancehistory/account/${accountId}/daterange?startDate=${startDate}&endDate=${endDate}`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    return await this.handleResponse<any[]>(response);
   }
 }
 
 export const apiService = new ApiService();
+export interface BalanceHistory {
+  id: number;
+  accountId: number;
+  balance: number;
+  previousBalance: number;
+  changeAmount: number;
+  changeType: string;
+  description: string;
+  date: string;
+  transactionId?: number;
+}
+
 export type { 
   LoginRequest, 
   RegisterRequest, 

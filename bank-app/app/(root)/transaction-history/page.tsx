@@ -7,12 +7,11 @@ import { useAccounts } from '@/lib/hooks/useAccounts';
 import { useTransactions } from '@/lib/hooks/useTransactions';
 import { Button } from '@/components/ui/button';
 import HeaderBox from '@/components/HeaderBox';
-import ModernTransactionChart from '@/components/ModernTransactionChart';
 
 const TransactionHistory = () => {
   const { isAuthenticated } = useAuth();
   const { accounts, getCurrencySymbol } = useAccounts();
-  const { transactions, loading, getTransactionsByDateRange } = useTransactions();
+  const { transactions, loading, getTransactionsByDateRange, getTransactionsByAccount } = useTransactions();
   const router = useRouter();
   const searchParams = useSearchParams();
   const accountIdParam = searchParams.get('accountId');
@@ -57,19 +56,31 @@ const TransactionHistory = () => {
       setError('');
       const finalAccountId = accountId !== undefined ? accountId : selectedAccountId;
       console.log('loadTransactions called with:', { accountId, selectedAccountId, finalAccountId });
-      await getTransactionsByDateRange(
-        startDate || undefined,
-        endDate || undefined,
-        finalAccountId
-      );
+      
+      let result;
+      if (finalAccountId) {
+        // Belirli bir account seçiliyse getTransactionsByAccount kullan
+        console.log('Using getTransactionsByAccount for account:', finalAccountId);
+        result = await getTransactionsByAccount(finalAccountId);
+      } else {
+        // Tüm hesaplar için getTransactionsByDateRange kullan (tarih filtreleme yapmadan)
+        console.log('Using getTransactionsByDateRange for all accounts (no date filter)');
+        result = await getTransactionsByDateRange(
+          undefined, // startDate
+          undefined, // endDate
+          undefined  // accountId
+        );
+      }
+      console.log('loadTransactions result:', result);
     } catch (err: any) {
+      console.error('loadTransactions error:', err);
       setError(err.message);
     }
   };
 
   // Load transactions when accounts are loaded
   useEffect(() => {
-    if (accounts.length > 0) {
+    if (accounts.length > 0 && selectedAccountId !== undefined) {
       console.log('useEffect çalıştı, selectedAccountId:', selectedAccountId);
       loadTransactions();
     }
@@ -80,17 +91,25 @@ const TransactionHistory = () => {
     console.log('handleAccountChange called with:', accountId);
     setSelectedAccountId(accountId);
     console.log('setSelectedAccountId called, new value should be:', accountId);
-    await loadTransactions(accountId);
+    // loadTransactions'ı useEffect'te çağıracağız, burada çağırmaya gerek yok
   };
 
   // Handle form submission
   const handleFilter = async (e: React.FormEvent) => {
     e.preventDefault();
-    await loadTransactions();
+    console.log('handleFilter called with selectedAccountId:', selectedAccountId);
+    // Form submission'da account seçiliyse getTransactionsByAccount kullan
+    if (selectedAccountId) {
+      console.log('Form filter: Using getTransactionsByAccount for account:', selectedAccountId);
+      await getTransactionsByAccount(selectedAccountId);
+    } else {
+      console.log('Form filter: Using getTransactionsByDateRange for all accounts (no date filter)');
+      await getTransactionsByDateRange(undefined, undefined, undefined);
+    }
   };
 
   // Handle quick filters
-  const handleQuickFilter = (filter: string) => {
+  const handleQuickFilter = async (filter: string) => {
     setQuickFilter(filter);
     const today = new Date();
     let start = new Date();
@@ -122,32 +141,24 @@ const TransactionHistory = () => {
         break;
     }
 
-    setStartDate(start.toISOString().split('T')[0]);
-    setEndDate(end.toISOString().split('T')[0]);
-  };
-
-  // Format date for display
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString('tr-TR', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
-  // Format amount for display
-  const formatAmount = (amount: any, accountId: number) => {
-    const safeAmount = typeof amount === 'number' && !isNaN(amount) ? amount : 0;
-    const account = accounts.find(acc => acc.id === accountId);
-    const symbol = account ? getCurrencySymbol(account.currencyType) : '₺';
+    const newStartDate = start.toISOString().split('T')[0];
+    const newEndDate = end.toISOString().split('T')[0];
     
-    return `${symbol}${safeAmount.toLocaleString('tr-TR', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`;
+    setStartDate(newStartDate);
+    setEndDate(newEndDate);
+    
+    // Tarih değiştikten sonra transaction'ları yeniden yükle
+    console.log('Quick filter applied, reloading transactions...');
+    // Quick filter'lar sadece tarih değiştiriyor, account seçiliyse getTransactionsByAccount kullan
+    if (selectedAccountId) {
+      console.log('Quick filter: Using getTransactionsByAccount for account:', selectedAccountId);
+      await getTransactionsByAccount(selectedAccountId);
+    } else {
+      console.log('Quick filter: Using getTransactionsByDateRange for all accounts (no date filter)');
+      await getTransactionsByDateRange(undefined, undefined, undefined);
+    }
   };
+
 
   // Get transaction type display info
   const getTransactionInfo = (transaction: any, currentAccountId: number) => {
@@ -311,25 +322,19 @@ const TransactionHistory = () => {
               </div>
             )}
 
-            {/* Modern Chart */}
-            {transactions.length > 0 && (
-              <ModernTransactionChart 
-                transactions={transactions}
-                accounts={accounts}
-                getCurrencySymbol={getCurrencySymbol}
-              />
-            )}
 
             {/* Transactions Table */}
-            <div className="bg-white rounded-lg border overflow-hidden">
+            <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
               <div className="px-6 py-4 border-b">
                 <h3 className="text-18 font-semibold">
-                  İşlemler ({transactions.length})
+                  İşlemler ({transactions.filter(t => t.transactionType !== 4).length})
                 </h3>
               </div>
 
               {loading ? (
-                <div className="text-center py-8">İşlemler yükleniyor...</div>
+                <div className="text-center py-8 text-gray-600">
+                  İşlemler yükleniyor...
+                </div>
               ) : transactions.length === 0 ? (
                 <div className="text-center py-8 text-gray-600">
                   Seçilen kriterlere uygun işlem bulunamadı.
@@ -340,53 +345,87 @@ const TransactionHistory = () => {
                     <thead className="bg-gray-50">
                       <tr>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          IBAN
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Tarih
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Hesap
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          İşlem Türü
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Açıklama
                         </th>
-                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Tür
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Tutar
                         </th>
-                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Kalan Bakiye
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Komisyon
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Bakiye
                         </th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {transactions.map((transaction, index) => {
+                      {transactions
+                        .filter(transaction => {
+                          // İşlem ücreti transaction'larını filtrele (transactionType === 4)
+                          return transaction.transactionType !== 4;
+                        })
+                        .map((transaction, index) => {
                         const account = accounts.find(acc => acc.id === transaction.accountId);
                         const transactionInfo = getTransactionInfo(transaction, transaction.accountId);
                         
                         return (
                           <tr key={transaction.id || `transaction-${index}`} className="hover:bg-gray-50">
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {formatDate(transaction.transactionDate)}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                               {account ? account.iban : `Hesap ${transaction.accountId}`}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className={`text-sm font-medium ${transactionInfo.color}`}>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {new Date(transaction.transactionDate).toLocaleDateString('tr-TR', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {transaction.description || 'Açıklama yok'}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm">
+                              <span className={`font-medium ${transactionInfo.color}`}>
                                 {transactionInfo.type}
                               </span>
                             </td>
-                            <td className="px-6 py-4 text-sm text-gray-900">
-                              {transaction.description}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
-                              <span className={`text-lg font-semibold ${transactionInfo.color}`}>
-                                {transactionInfo.sign}{formatAmount(transactionInfo.sign === '-' ? Math.abs(transaction.amount) : transaction.amount, transaction.accountId)}
+                            <td className="px-6 py-4 whitespace-nowrap text-sm">
+                              <span className={`font-semibold ${transactionInfo.color}`}>
+                                {transactionInfo.sign}
+                                {getCurrencySymbol(account?.currencyType || 0)}
+                                {Math.abs(transaction.amount).toLocaleString('tr-TR', { 
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2
+                                })}
                               </span>
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
-                              {formatAmount(transaction.balanceAfter, transaction.accountId)}
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {transaction.fee ? (
+                                <>
+                                  {getCurrencySymbol(account?.currencyType || 0)}
+                                  {transaction.fee.toLocaleString('tr-TR', { 
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2
+                                  })}
+                                </>
+                              ) : '-'}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                              {getCurrencySymbol(account?.currencyType || 0)}
+                              {transaction.balanceAfter?.toLocaleString('tr-TR', { 
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2
+                              }) || '-'}
                             </td>
                           </tr>
                         );
@@ -398,13 +437,13 @@ const TransactionHistory = () => {
             </div>
 
             {/* Summary */}
-            {transactions.length > 0 && (
+            {transactions.filter(t => t.transactionType !== 4).length > 0 && (
               <div className="bg-blue-50 p-4 rounded-lg">
                 <h4 className="font-semibold text-blue-900 mb-2">Özet</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
                   <div>
                     <span className="text-blue-700">Toplam İşlem: </span>
-                    <span className="font-semibold">{transactions.length}</span>
+                    <span className="font-semibold">{transactions.filter(t => t.transactionType !== 4).length}</span>
                   </div>
                   <div>
                     <span className="text-green-700 font-semibold">Para Yatırma: </span>
@@ -421,13 +460,13 @@ const TransactionHistory = () => {
                   <div>
                     <span className="text-green-700 font-semibold">Transfer (Gelen): </span>
                     <span className="font-bold text-green-800">
-                      {transactions.filter(t => t.transactionType === 3 && t.amount > 0).length}
+                      {transactions.filter(t => t.transactionType === 3 && t.targetAccountId === selectedAccountId).length}
                     </span>
                   </div>
                   <div>
                     <span className="text-red-700 font-semibold">Transfer (Giden): </span>
                     <span className="font-bold text-red-800">
-                      {transactions.filter(t => t.transactionType === 3 && t.amount < 0).length}
+                      {transactions.filter(t => t.transactionType === 3 && t.accountId === selectedAccountId).length}
                     </span>
                   </div>
                 </div>

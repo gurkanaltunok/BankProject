@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { apiService, type Transaction } from '../api';
 import { useAuth } from '../auth-context';
 
@@ -125,6 +125,24 @@ export function useTransactions(accountId?: number) {
     }
   };
 
+  const getTransactionsByAccount = useCallback(async (targetAccountId: number) => {
+    try {
+      console.log('getTransactionsByAccount called with accountId:', targetAccountId);
+      setLoading(true);
+      setError(null);
+      const data = await apiService.getTransactionsByAccount(targetAccountId);
+      console.log('getTransactionsByAccount response:', data);
+      setTransactions(data);
+      return data;
+    } catch (err: any) {
+      console.error('getTransactionsByAccount error:', err);
+      setError(err.message || 'İşlemler yüklenirken hata oluştu');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   return {
     transactions,
     loading,
@@ -133,6 +151,7 @@ export function useTransactions(accountId?: number) {
     withdraw,
     transfer,
     getTransactionsByDateRange,
+    getTransactionsByAccount,
     getTransactionTypeLabel,
     getTransactionTypeColor,
     refetch: () => fetchTransactions(accountId),

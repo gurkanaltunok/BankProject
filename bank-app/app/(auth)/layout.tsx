@@ -1,22 +1,13 @@
 export default function AuthLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
-    <main className="flex min-h-screen w-full justify-between font-inter">
-      {children}
-      <div className="auth-asset">
-        <div>
-          <img 
-            src="/icons/auth-image.svg"
-            alt="Auth image"
-            width={500}
-            height={500}
-            className="rounded-l-xl object-contain"
-          />
-        </div>
+    <div className="min-h-screen w-full bg-blue-50">
+      <div className="flex min-h-screen w-full justify-center items-center p-4">
+        {children}
       </div>
-    </main>
+    </div>
   );
 }

@@ -27,6 +27,7 @@
 /Users/gurkan/Documents/BankProject2/BankProject.DataAccess/obj/Debug/net8.0/BankProject.DataAccess.AssemblyInfoInputs.cache
 /Users/gurkan/Documents/BankProject2/BankProject.DataAccess/obj/Debug/net8.0/BankProject.DataAccess.AssemblyInfo.cs
 /Users/gurkan/Documents/BankProject2/BankProject.DataAccess/obj/Debug/net8.0/BankProject.DataAccess.csproj.CoreCompileInputs.cache
+/Users/gurkan/Documents/BankProject2/BankProject.DataAccess/obj/Debug/net8.0/BankProject.DataAccess.sourcelink.json
 /Users/gurkan/Documents/BankProject2/BankProject.DataAccess/obj/Debug/net8.0/BankProj.8D7B1403.Up2Date
 /Users/gurkan/Documents/BankProject2/BankProject.DataAccess/obj/Debug/net8.0/BankProject.DataAccess.dll
 /Users/gurkan/Documents/BankProject2/BankProject.DataAccess/obj/Debug/net8.0/refint/BankProject.DataAccess.dll

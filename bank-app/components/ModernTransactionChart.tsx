@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { Bar, BarChart, Line, LineChart, ResponsiveContainer, XAxis, YAxis } from "recharts"
 import { CurrencyType, getCurrencySymbol } from '@/types/enums'
+import { useExchangeRates } from '@/lib/hooks/useExchangeRates'
 
 interface Transaction {
   id: number;
@@ -35,6 +36,7 @@ export default function ModernTransactionChart({
   accounts, 
   getCurrencySymbol 
 }: ModernTransactionChartProps) {
+  const { convertToTRY, rates } = useExchangeRates();
   // Günlük verileri hazırla
   const dailyData: { [key: string]: { deposits: number; withdrawals: number; date: string } } = {}
   
@@ -58,10 +60,18 @@ export default function ModernTransactionChart({
       }
     }
     
-    if (transaction.transactionType === 0) {
+    // Doğru transaction type mapping
+    if (transaction.transactionType === 1) { // Deposit
       dailyData[date].deposits += Math.abs(transaction.amount)
-    } else if (transaction.transactionType === 1) {
+    } else if (transaction.transactionType === 2) { // Withdraw
       dailyData[date].withdrawals += Math.abs(transaction.amount)
+    } else if (transaction.transactionType === 3) { // Transfer
+      // Transfer işlemlerinde gelen/giden ayrımı
+      if (transaction.amount > 0) {
+        dailyData[date].deposits += Math.abs(transaction.amount) // Gelen transfer
+      } else {
+        dailyData[date].withdrawals += Math.abs(transaction.amount) // Giden transfer
+      }
     }
   })
 
@@ -75,14 +85,8 @@ export default function ModernTransactionChart({
   const accountData = accounts
     .filter(account => account.balance > 0)
     .map(account => {
-      let balanceInTRY = account.balance;
-      
-      // Döviz kurları (basit mock)
-      if (account.currencyType === 'USD') {
-        balanceInTRY = account.balance * 34.5; // USD to TRY
-      } else if (account.currencyType === 'EUR') {
-        balanceInTRY = account.balance * 37.2; // EUR to TRY
-      }
+      // Gerçek döviz kurları ile çevir
+      const balanceInTRY = convertToTRY(account.balance, account.currencyType || 0);
       
       return {
         name: `${account.iban.slice(-4)}`,

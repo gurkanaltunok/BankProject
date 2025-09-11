@@ -45,17 +45,19 @@ export default function RootLayout({
   };
 
   return (
-    <main className="flex h-screen w-full font-inter">
+    <main className="flex min-h-screen w-full font-inter bg-gray-50">
       <Sidebar user={loggedInUser} />
 
-      <div className="flex size-full flex-col">
+      <div className="flex flex-1 flex-col">
         <div className="root-layout">
           <Image src="/icons/logo.svg" width={30} height={30} alt="logo" />
           <div>
             <MobileNav user={loggedInUser} />
           </div>
         </div>
-        {children}
+        <div className="flex-1">
+          {children}
+        </div>
       </div>
     </main>
   );

@@ -400,11 +400,17 @@ class ApiService {
   }
 
   async transfer(data: TransferRequest): Promise<Transaction> {
+    console.log('Transfer API call with data:', data);
     const response = await fetch(`${API_BASE_URL}/transactions/transfer`, {
       method: 'POST',
       headers: this.getAuthHeaders(),
       body: JSON.stringify(data),
     });
+
+    console.log('Transfer API response status:', response.status);
+    if (!response.ok) {
+      console.log('Transfer API error - response not ok');
+    }
 
     return await this.handleResponse<Transaction>(response);
   }

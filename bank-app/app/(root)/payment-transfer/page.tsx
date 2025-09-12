@@ -94,16 +94,21 @@ const PaymentTransfer = () => {
         targetAccount = accounts.find(acc => acc.iban === cleanIban);
         
         if (targetAccount) {
-          targetAccountId = targetAccount.id;
+          console.log('Found account in local accounts:', targetAccount);
+          targetAccountId = targetAccount.accountId || targetAccount.id;
         } else {
           // Eğer kendi hesaplarında bulunamazsa, API'den tüm hesaplarda ara
           try {
             targetAccount = await apiService.getAccountByIban(cleanIban);
-            targetAccountId = targetAccount.id;
+            console.log('Found account via API:', targetAccount);
+            targetAccountId = targetAccount.accountId || targetAccount.id;
           } catch (apiError) {
+            console.log('API error:', apiError);
             throw new Error('Bu IBAN numarasına sahip hesap bulunamadı. Lütfen geçerli bir IBAN girin.');
           }
         }
+        
+        console.log('Final targetAccountId:', targetAccountId);
         
         if (targetAccountId === selectedAccountId) {
           throw new Error('Aynı hesaba transfer yapamazsınız');

@@ -21,7 +21,11 @@ namespace BankProject.API.Controllers
 
         private IActionResult AuthorizeAccount(int accountId)
         {
-            if (!IsAdmin && !_transactionService.CheckAccountOwner(accountId, UserId))
+            // Admin kullanıcıları herhangi bir hesabın işlemlerini görebilir
+            if (IsAdmin)
+                return null!;
+                
+            if (!_transactionService.CheckAccountOwner(accountId, UserId))
                 return Forbid();
             return null!;
         }

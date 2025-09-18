@@ -60,15 +60,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await new Promise(resolve => setTimeout(resolve, 100));
       
       // Kullanıcı bilgilerini çek
-      const userInfo = await apiService.getCurrentUser();
-      
-      setUser({
-        id: authResponse.UserId,
-        name: userInfo.name,
-        surname: userInfo.surname,
-        email: userInfo.email,
-        roleId: authResponse.RoleId,
-      });
+      try {
+        const userInfo = await apiService.getCurrentUser();
+        setUser({
+          id: authResponse.UserId,
+          name: userInfo.name,
+          surname: userInfo.surname,
+          email: userInfo.email,
+          roleId: authResponse.RoleId,
+        });
+      } catch (userError) {
+        console.error('getCurrentUser error:', userError);
+        // getCurrentUser başarısız olsa bile login başarılı, sadece temel bilgileri kullan
+        setUser({
+          id: authResponse.UserId,
+          roleId: authResponse.RoleId,
+        });
+      }
     } catch (error) {
       throw error;
     } finally {

@@ -21,6 +21,7 @@ interface RegisterRequest {
   Password: string;
   PhoneNumber: string;
   Address: string;
+  BirthDate: Date;
   RoleId: number;
 }
 
@@ -105,6 +106,15 @@ interface Transaction {
   transactionDate: string;
   balanceAfter: number;
   fee?: number;
+  feeInTRY?: number;
+  exchangeRate?: {
+    exchangeRateId: number;
+    fromCurrency: string;
+    toCurrency: string;
+    rate: number;
+    date: string;
+    source?: string;
+  };
   targetAccountId?: number;
 }
 
@@ -353,6 +363,19 @@ class ApiService {
     }));
   }
 
+  async getMyTotalBalance(): Promise<number> {
+    console.log('Getting my total balance...');
+    const response = await fetch(`${API_BASE_URL}/accounts/my-total-balance`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    console.log('My total balance response status:', response.status);
+    const data = await this.handleResponse<{ totalBalanceInTRY: number }>(response);
+    console.log('My total balance data:', data);
+    
+    return data.totalBalanceInTRY;
+  }
+
   async getCurrentUser(): Promise<any> {
     const response = await fetch(`${API_BASE_URL}/users/me`, {
       headers: this.getAuthHeaders(),
@@ -437,6 +460,8 @@ class ApiService {
       transactionDate: transaction.transactionDate,
       balanceAfter: transaction.balanceAfter,
       fee: transaction.fee,
+      feeInTRY: transaction.feeInTRY,
+      exchangeRate: transaction.exchangeRate,
       targetAccountId: transaction.targetAccountId,
     }));
     
@@ -527,6 +552,118 @@ class ApiService {
     });
 
     return await this.handleResponse<any[]>(response);
+  }
+
+  // Admin API methods
+  async getAdminDashboard(): Promise<any> {
+    // Cache-busting için timestamp ekle
+    const timestamp = new Date().getTime();
+    const response = await fetch(`${API_BASE_URL}/admin/dashboard?t=${timestamp}`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    return await this.handleResponse<any>(response);
+  }
+
+  async getBankBalance(): Promise<{ balance: number }> {
+    const response = await fetch(`${API_BASE_URL}/admin/bank-balance`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    return await this.handleResponse<{ balance: number }>(response);
+  }
+
+  async getTotalBalance(): Promise<{ totalBalance: number }> {
+    const response = await fetch(`${API_BASE_URL}/admin/total-balance`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    return await this.handleResponse<{ totalBalance: number }>(response);
+  }
+
+  async getAllUsers(): Promise<any[]> {
+    const response = await fetch(`${API_BASE_URL}/users`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    return await this.handleResponse<any[]>(response);
+  }
+
+  async updateUserRole(userId: number, roleId: number): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}/users/${userId}/role`, {
+      method: 'PUT',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ roleId }),
+    });
+
+    return await this.handleResponse<any>(response);
+  }
+
+  async getDailyTransactionVolume(): Promise<any[]> {
+    const response = await fetch(`${API_BASE_URL}/admin/daily-transaction-volume`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    return await this.handleResponse<any[]>(response);
+  }
+
+  async getDailyCommissionRevenue(): Promise<any[]> {
+    const response = await fetch(`${API_BASE_URL}/admin/daily-commission-revenue`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    return await this.handleResponse<any[]>(response);
+  }
+
+  // Location API methods
+  async getCities(): Promise<any[]> {
+    const response = await fetch(`${API_BASE_URL}/location/cities`);
+    return await this.handleResponse<any[]>(response);
+  }
+
+  async getDistricts(cityId: number): Promise<any[]> {
+    const response = await fetch(`${API_BASE_URL}/location/districts/${cityId}`);
+    return await this.handleResponse<any[]>(response);
+  }
+
+
+  // Address API methods
+  async createAddress(addressData: any): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}/address`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(addressData),
+    });
+
+    return await this.handleResponse<any>(response);
+  }
+
+  async getAddressByUserId(userId: number): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}/address/user/${userId}`, {
+      headers: this.getAuthHeaders(),
+    });
+
+    return await this.handleResponse<any>(response);
+  }
+
+  async updateAddress(addressId: number, addressData: any): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}/address/${addressId}`, {
+      method: 'PUT',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(addressData),
+    });
+
+    return await this.handleResponse<any>(response);
+  }
+
+  async changePassword(passwordData: { currentPassword: string; newPassword: string }): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}/auth/change-password`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(passwordData),
+    });
+
+    return await this.handleResponse<any>(response);
   }
 }
 

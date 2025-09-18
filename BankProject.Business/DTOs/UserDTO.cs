@@ -28,8 +28,5 @@ namespace BankProject.Business.DTOs
 
         [RegularExpression(@"^5[0-9]{9}$", ErrorMessage = "Telefon numarası 10 haneli olmalı ve 5 ile başlamalı.")]
         public string PhoneNumber { get; set; } = string.Empty;
-
-        [Required, MaxLength(200)]
-        public string Address { get; set; } = string.Empty;
     }
 }

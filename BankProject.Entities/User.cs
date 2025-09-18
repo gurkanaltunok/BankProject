@@ -29,8 +29,13 @@ namespace BankProject.Entities
         [Required, MaxLength(10), MinLength(10)]
         public string PhoneNumber { get; set; } = string.Empty;
 
-        [Required, MaxLength(200)]
-        public string Address { get; set; } = string.Empty;
+        [Required]
+        public DateTime BirthDate { get; set; }
+
+        public int? AddressId { get; set; }
+
+        [ForeignKey("AddressId")]
+        public virtual Address? Address { get; set; }
 
         [ForeignKey("Role")]
         public int RoleId { get; set; }

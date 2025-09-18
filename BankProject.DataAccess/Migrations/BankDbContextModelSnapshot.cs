@@ -62,6 +62,55 @@ namespace BankProject.DataAccess.Migrations
                     b.ToTable("Accounts");
                 });
 
+            modelBuilder.Entity("BankProject.Entities.Address", b =>
+                {
+                    b.Property<int>("AddressId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("AddressId"));
+
+                    b.Property<string>("AddressDetail")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("City")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Country")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("District")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Neighborhood")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("AddressId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Addresses");
+                });
+
             modelBuilder.Entity("BankProject.Entities.BalanceHistory", b =>
                 {
                     b.Property<int>("Id")
@@ -106,6 +155,43 @@ namespace BankProject.DataAccess.Migrations
                     b.HasIndex("TransactionId");
 
                     b.ToTable("BalanceHistories");
+                });
+
+            modelBuilder.Entity("BankProject.Entities.ExchangeRate", b =>
+                {
+                    b.Property<int>("ExchangeRateId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ExchangeRateId"));
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("FromCurrency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("nvarchar(3)");
+
+                    b.Property<decimal>("Rate")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("decimal(18,6)");
+
+                    b.Property<string>("Source")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("ToCurrency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("nvarchar(3)");
+
+                    b.HasKey("ExchangeRateId");
+
+                    b.HasIndex("FromCurrency", "ToCurrency", "Date")
+                        .IsUnique();
+
+                    b.ToTable("ExchangeRates");
                 });
 
             modelBuilder.Entity("BankProject.Entities.Role", b =>
@@ -162,7 +248,14 @@ namespace BankProject.DataAccess.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<int?>("ExchangeRateId")
+                        .HasColumnType("int");
+
                     b.Property<decimal?>("Fee")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("FeeInTRY")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
@@ -179,6 +272,8 @@ namespace BankProject.DataAccess.Migrations
 
                     b.HasIndex("AccountId");
 
+                    b.HasIndex("ExchangeRateId");
+
                     b.HasIndex("TargetAccountId");
 
                     b.ToTable("Transactions");
@@ -192,10 +287,11 @@ namespace BankProject.DataAccess.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("Address")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                    b.Property<int?>("AddressId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("BirthDate")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Email")
                         .IsRequired()
@@ -237,9 +333,22 @@ namespace BankProject.DataAccess.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("AddressId");
+
                     b.HasIndex("RoleId");
 
                     b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("BankProject.Entities.Address", b =>
+                {
+                    b.HasOne("BankProject.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("BankProject.Entities.BalanceHistory", b =>
@@ -267,22 +376,40 @@ namespace BankProject.DataAccess.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("BankProject.Entities.ExchangeRate", "ExchangeRate")
+                        .WithMany("Transactions")
+                        .HasForeignKey("ExchangeRateId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("BankProject.Entities.Account", "TargetAccount")
                         .WithMany()
                         .HasForeignKey("TargetAccountId");
 
                     b.Navigation("Account");
 
+                    b.Navigation("ExchangeRate");
+
                     b.Navigation("TargetAccount");
                 });
 
             modelBuilder.Entity("BankProject.Entities.User", b =>
                 {
+                    b.HasOne("BankProject.Entities.Address", "Address")
+                        .WithMany()
+                        .HasForeignKey("AddressId");
+
                     b.HasOne("BankProject.Entities.Role", null)
                         .WithMany("Users")
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Address");
+                });
+
+            modelBuilder.Entity("BankProject.Entities.ExchangeRate", b =>
+                {
+                    b.Navigation("Transactions");
                 });
 
             modelBuilder.Entity("BankProject.Entities.Role", b =>

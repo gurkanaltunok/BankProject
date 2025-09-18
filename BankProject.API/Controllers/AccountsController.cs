@@ -6,6 +6,9 @@ using BankProject.Entities.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Razor.TagHelpers;
+using System.Net.Http;
+using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace BankProject.API.Controllers
 {
@@ -16,11 +19,13 @@ namespace BankProject.API.Controllers
     {
         private readonly IAccountService _accountService;
         private readonly IUserService _userService;
+        private readonly HttpClient _httpClient;
 
-        public AccountsController(IAccountService accountService, IUserService userService)
+        public AccountsController(IAccountService accountService, IUserService userService, HttpClient httpClient)
         {
             _accountService = accountService;
             _userService = userService;
+            _httpClient = httpClient;
         }
 
         [HttpGet("{id}")]
@@ -58,6 +63,22 @@ namespace BankProject.API.Controllers
                 Console.WriteLine($"Account: ID={account.AccountId}, IBAN={account.IBAN}, UserId={account.UserId}");
             }
             return Ok(accounts);
+        }
+
+        [HttpGet("my-total-balance")]
+        [Microsoft.AspNetCore.Authorization.Authorize]
+        public async Task<IActionResult> GetMyTotalBalance()
+        {
+            var userIdClaim = User.FindFirst("UserId");
+            if (userIdClaim == null)
+                return Unauthorized();
+
+            var userId = int.Parse(userIdClaim.Value);
+            var accounts = _accountService.GetAccountsByUserId(userId);
+            
+            var totalBalanceInTRY = await CalculateTotalBalanceInTRY(accounts);
+            
+            return Ok(new { totalBalanceInTRY });
         }
 
         [HttpGet("by-iban/{iban}")]
@@ -126,6 +147,81 @@ namespace BankProject.API.Controllers
             existingAccount.IsActive = dto.IsActive;
             var updatedAccount = _accountService.UpdateAccount(existingAccount);
             return Ok(updatedAccount);
+        }
+
+        private async Task<decimal> CalculateTotalBalanceInTRY(List<Account> accounts)
+        {
+            decimal totalBalance = 0;
+
+            foreach (var account in accounts)
+            {
+                if (account.CurrencyType == CurrencyType.TRY)
+                {
+                    totalBalance += account.Balance;
+                }
+                else
+                {
+                    var exchangeRate = await GetCurrentExchangeRateAsync(GetCurrencyString(account.CurrencyType), "TRY");
+                    totalBalance += account.Balance * exchangeRate;
+                }
+            }
+
+            return totalBalance;
+        }
+
+        private string GetCurrencyString(CurrencyType currencyType)
+        {
+            return currencyType switch
+            {
+                CurrencyType.TRY => "TRY",
+                CurrencyType.USD => "USD",
+                CurrencyType.EUR => "EUR",
+                CurrencyType.GBP => "GBP",
+                _ => "TRY"
+            };
+        }
+
+        private async Task<decimal> GetCurrentExchangeRateAsync(string fromCurrency, string toCurrency)
+        {
+            try
+            {
+                var response = await _httpClient.GetStringAsync("https://api.exchangerate-api.com/v4/latest/TRY");
+                var jsonDoc = JsonDocument.Parse(response);
+                
+                if (jsonDoc.RootElement.TryGetProperty("rates", out var ratesElement))
+                {
+                    if (fromCurrency == "TRY")
+                    {
+                        var toRate = ratesElement.GetProperty(toCurrency).GetDecimal();
+                        return 1.0m / toRate;
+                    }
+                    else if (toCurrency == "TRY")
+                    {
+                        var fromRate = ratesElement.GetProperty(fromCurrency).GetDecimal();
+                        return 1.0m / fromRate;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Exchange rate API error: {ex.Message}");
+            }
+
+            // Fallback rates
+            var fallbackRates = new Dictionary<string, decimal>
+            {
+                { "TRY", 1.0m },
+                { "USD", 41.32m },
+                { "EUR", 44.85m },
+                { "GBP", 52.48m }
+            };
+
+            if (fallbackRates.ContainsKey(fromCurrency) && fallbackRates.ContainsKey(toCurrency))
+            {
+                return fallbackRates[toCurrency] / fallbackRates[fromCurrency];
+            }
+
+            return 1.0m;
         }
     }
 }

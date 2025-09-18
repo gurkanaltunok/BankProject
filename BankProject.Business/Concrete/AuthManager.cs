@@ -7,6 +7,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace BankProject.Business.Concrete
@@ -14,11 +15,13 @@ namespace BankProject.Business.Concrete
     public class AuthManager : IAuthService
     {
         private readonly IUserRepository _userRepository;
+        private readonly IAddressService _addressService;
         private readonly IConfiguration _config;
 
-        public AuthManager(IUserRepository userRepository, IConfiguration config)
+        public AuthManager(IUserRepository userRepository, IAddressService addressService, IConfiguration config)
         {
             _userRepository = userRepository;
+            _addressService = addressService;
             _config = config;
         }
 
@@ -35,14 +38,31 @@ namespace BankProject.Business.Concrete
                 Name = dto.Name,
                 Surname = dto.Surname,
                 Email = dto.Email,
-                Address = dto.Address,
                 PhoneNumber = dto.PhoneNumber,
+                BirthDate = dto.BirthDate,
                 PasswordHash = hash,
                 PasswordSalt = salt,
                 RoleId = 1
             };
 
             _userRepository.CreateUser(user);
+
+            // Adres oluştur
+            var addressDto = new CreateAddressDTO
+            {
+                Country = dto.Country,
+                City = dto.City,
+                District = dto.District,
+                Neighborhood = dto.Neighborhood,
+                AddressDetail = dto.AddressDetail,
+                UserId = user.Id
+            };
+
+            var address = _addressService.CreateAddress(addressDto);
+
+            // User'ın AddressId'sini güncelle
+            user.AddressId = address.AddressId;
+            _userRepository.UpdateUser(user);
 
             return new AuthResultDTO { Success = true };
         }
@@ -90,6 +110,40 @@ namespace BankProject.Business.Concrete
             );
 
             return new JwtSecurityTokenHandler().WriteToken(token);
+        }
+
+
+        public AuthResultDTO ChangePassword(int userId, string currentPassword, string newPassword)
+        {
+            try
+            {
+                // Get user by ID
+                var user = _userRepository.GetUserById(userId);
+                if (user == null)
+                    return new AuthResultDTO { Success = false, Message = "Kullanıcı bulunamadı." };
+
+                // Verify current password
+                if (!PasswordHelper.VerifyPasswordHash(currentPassword, user.PasswordHash, user.PasswordSalt))
+                    return new AuthResultDTO { Success = false, Message = "Mevcut şifre yanlış." };
+
+                // Validate new password format
+                if (!System.Text.RegularExpressions.Regex.IsMatch(newPassword, @"^\d{6}$"))
+                    return new AuthResultDTO { Success = false, Message = "Yeni şifre 6 haneli olmalı ve sadece rakamlardan oluşmalı." };
+
+                // Hash new password
+                PasswordHelper.CreatePasswordHash(newPassword, out byte[] newHash, out byte[] newSalt);
+
+                // Update user password
+                user.PasswordHash = newHash;
+                user.PasswordSalt = newSalt;
+                _userRepository.UpdateUser(user);
+
+                return new AuthResultDTO { Success = true, Message = "Şifre başarıyla değiştirildi." };
+            }
+            catch (Exception ex)
+            {
+                return new AuthResultDTO { Success = false, Message = ex.Message };
+            }
         }
     }
 }

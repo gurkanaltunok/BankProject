@@ -8,7 +8,6 @@ import { useTransactions } from '@/lib/hooks/useTransactions';
 import { apiService } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import HeaderBox from '@/components/HeaderBox';
-import TransactionConfirmModal from '@/components/TransactionConfirmModal';
 
 const PaymentTransfer = () => {
   const { isAuthenticated } = useAuth();
@@ -26,8 +25,6 @@ const PaymentTransfer = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [pendingTransaction, setPendingTransaction] = useState<any>(null);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -63,10 +60,6 @@ const PaymentTransfer = () => {
       
       if (amountValue <= 0) {
         throw new Error('Geçerli bir tutar girin');
-      }
-
-      if (!description.trim()) {
-        throw new Error('Açıklama alanı zorunludur');
       }
 
       if (!selectedAccountId || selectedAccountId === 0) {
@@ -113,66 +106,35 @@ const PaymentTransfer = () => {
         if (targetAccountId === selectedAccountId) {
           throw new Error('Aynı hesaba transfer yapamazsınız');
         }
+
+        // Para birimi kontrolü - aynı para biriminde olmalı
+        if (targetAccount && selectedAccount) {
+          if (targetAccount.currencyType !== selectedAccount.currencyType) {
+            const fromCurrency = selectedAccount.currencyType === 0 ? 'TRY' : selectedAccount.currencyType === 1 ? 'USD' : 'EUR';
+            const toCurrency = targetAccount.currencyType === 0 ? 'TRY' : targetAccount.currencyType === 1 ? 'USD' : 'EUR';
+            throw new Error(`Farklı para birimlerinden transfer yapılamaz. Gönderen hesap: ${fromCurrency}, Alıcı hesap: ${toCurrency}`);
+          }
+        }
       }
 
-      // Onay modal'ı için veri hazırla
-      const fee = (transactionType === 'withdraw' || transactionType === 'transfer') ? amountValue * 0.02 : 0;
-      
-      setPendingTransaction({
-        type: transactionType,
+      // Onay sayfasına yönlendir
+      const transactionData = {
+        transactionType: transactionType,
         amount: amountValue,
-        description,
-        accountIban: selectedAccount?.iban,
+        description: description,
+        selectedAccountId: selectedAccountId,
         targetIban: targetIban,
-        currentBalance: selectedAccount?.balance || 0,
-        fee,
-        currencyType: selectedAccount?.currencyType || 0,
-        targetAccountId
-      });
+        targetAccountId: targetAccountId
+      };
       
-      setShowConfirmModal(true);
+      const encodedData = encodeURIComponent(JSON.stringify(transactionData));
+      router.push(`/transaction-confirm?data=${encodedData}`);
       
     } catch (err: any) {
       setError(err.message);
     }
   };
 
-  const handleConfirmTransaction = async () => {
-    if (!pendingTransaction) return;
-    
-    setLoading(true);
-    setShowConfirmModal(false);
-    
-    try {
-      let transaction;
-      
-      switch (pendingTransaction.type) {
-        case 'deposit':
-          transaction = await deposit(selectedAccountId, pendingTransaction.amount, pendingTransaction.description);
-          setSuccess('Para yatırma işlemi başarıyla tamamlandı');
-          break;
-        case 'withdraw':
-          transaction = await withdraw(selectedAccountId, pendingTransaction.amount, pendingTransaction.description);
-          setSuccess('Para çekme işlemi başarıyla tamamlandı');
-          break;
-        case 'transfer':
-          transaction = await transfer(selectedAccountId, pendingTransaction.targetAccountId, pendingTransaction.amount, pendingTransaction.description);
-          setSuccess('Transfer işlemi başarıyla tamamlandı');
-          break;
-      }
-
-      // Reset form
-      setAmount('');
-      setDescription('');
-      setTargetIban('');
-      setPendingTransaction(null);
-      
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   if (!isAuthenticated) {
     return null;
@@ -199,171 +161,238 @@ const PaymentTransfer = () => {
             </Button>
           </div>
         ) : (
-          <div className="space-y-6">
-            {/* Account Selection */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                İşlem Yapılacak Hesap
-              </label>
-              <select
-                value={selectedAccountId || ''}
-                onChange={(e) => setSelectedAccountId(parseInt(e.target.value))}
-                className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-bankGradient"
-              >
-                {accounts.map((account) => (
-                  <option key={account.id} value={account.id}>
-                    {account.iban} - {account.balance.toLocaleString('tr-TR', {
-                      style: 'currency',
-                      currency: getCurrencyTypeLabel(account.currencyType)
-                    })}
-                  </option>
-                ))}
-              </select>
-              
-              {selectedAccount && (
-                <div className="mt-2 p-3 bg-blue-50 rounded-md">
-                  <p className="text-sm text-blue-800">
-                    Mevcut Bakiye: {selectedAccount.balance.toLocaleString('tr-TR', {
-                      style: 'currency',
-                      currency: getCurrencyTypeLabel(selectedAccount.currencyType)
-                    })}
-                  </p>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Left Column - Account Selection & Transaction Type */}
+            <div className="lg:col-span-1 space-y-6">
+              {/* Account Selection Card */}
+              <div className="bg-white rounded-xl shadow-chart border border-gray-200 p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 bg-blue-25 rounded-lg flex items-center justify-center">
+                    <img src="/icons/connect-bank.svg" alt="Account" className="w-5 h-5" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-black-1">Hesap Seçimi</h3>
                 </div>
-              )}
+                
+                <div className="space-y-3">
+                  <label className="block text-sm font-medium text-gray-700">
+                    İşlem Yapılacak Hesap
+                  </label>
+                  <select
+                    value={selectedAccountId || ''}
+                    onChange={(e) => setSelectedAccountId(parseInt(e.target.value))}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-bankGradient focus:border-bankGradient transition-colors"
+                  >
+                    {accounts.map((account) => (
+                      <option key={account.id} value={account.id}>
+                        {account.iban} - {account.balance.toLocaleString('tr-TR', {
+                          style: 'currency',
+                          currency: getCurrencyTypeLabel(account.currencyType)
+                        })}
+                      </option>
+                    ))}
+                  </select>
+                  
+                  {selectedAccount && (
+                    <div className="mt-3 p-3 bg-blue-25 rounded-lg border border-blue-100">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-gray-600">Mevcut Bakiye</span>
+                        <span className="text-base font-semibold text-gray-900">
+                          {selectedAccount.balance.toLocaleString('tr-TR', {
+                            style: 'currency',
+                            currency: getCurrencyTypeLabel(selectedAccount.currencyType)
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Transaction Type Selection Card */}
+              <div className="bg-white rounded-xl shadow-chart border border-gray-200 p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 bg-blue-25 rounded-lg flex items-center justify-center">
+                    <img src="/icons/transaction.svg" alt="Transaction" className="w-5 h-5" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-black-1">İşlem Türü</h3>
+                </div>
+                
+                <div className="space-y-3">
+                  <button
+                    type="button"
+                    onClick={() => setTransactionType('deposit')}
+                    className={`w-full p-4 rounded-lg border-2 transition-all duration-200 flex items-center gap-3 ${
+                      transactionType === 'deposit'
+                        ? 'border-blue-600 bg-blue-25 text-blue-700'
+                        : 'border-gray-200 bg-white text-gray-700 hover:border-blue-300 hover:bg-blue-25'
+                    }`}
+                  >
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                      transactionType === 'deposit' ? 'bg-blue-600' : 'bg-gray-100'
+                    }`}>
+                      <img src="/icons/deposit.png" alt="Deposit" className={`w-6 h-6 ${transactionType === 'deposit' ? 'filter brightness-0 invert' : ''}`} />
+                    </div>
+                    <div className="text-left">
+                      <div className="font-medium">Para Yatırma</div>
+                      <div className="text-sm opacity-75">Hesabınıza para ekleyin</div>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setTransactionType('withdraw')}
+                    className={`w-full p-4 rounded-lg border-2 transition-all duration-200 flex items-center gap-3 ${
+                      transactionType === 'withdraw'
+                        ? 'border-blue-500 bg-blue-25 text-blue-600'
+                        : 'border-gray-200 bg-white text-gray-700 hover:border-blue-300 hover:bg-blue-25'
+                    }`}
+                  >
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                      transactionType === 'withdraw' ? 'bg-blue-500' : 'bg-gray-100'
+                    }`}>
+                      <img src="/icons/withdraw.png" alt="Withdraw" className={`w-6 h-6 ${transactionType === 'withdraw' ? 'filter brightness-0 invert' : ''}`} />
+                    </div>
+                    <div className="text-left">
+                      <div className="font-medium">Para Çekme</div>
+                      <div className="text-sm opacity-75">Hesabınızdan para çekin</div>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setTransactionType('transfer')}
+                    className={`w-full p-4 rounded-lg border-2 transition-all duration-200 flex items-center gap-3 ${
+                      transactionType === 'transfer'
+                        ? 'border-bankGradient bg-blue-25 text-bankGradient'
+                        : 'border-gray-200 bg-white text-gray-700 hover:border-bankGradient hover:bg-blue-25'
+                    }`}
+                  >
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                      transactionType === 'transfer' ? 'bg-bankGradient' : 'bg-gray-100'
+                    }`}>
+                      <img src="/icons/transfer.png" alt="Transfer" className={`w-6 h-6 ${transactionType === 'transfer' ? 'filter brightness-0 invert' : ''}`} />
+                    </div>
+                    <div className="text-left">
+                      <div className="font-medium">Transfer</div>
+                      <div className="text-sm opacity-75">Başka hesaba para gönderin</div>
+                    </div>
+                  </button>
+                </div>
+              </div>
             </div>
 
-            {/* Transaction Type Selection */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                İşlem Türü
-              </label>
-              <div className="flex gap-4">
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="transactionType"
-                    value="deposit"
-                    checked={transactionType === 'deposit'}
-                    onChange={(e) => setTransactionType(e.target.value as any)}
-                    className="mr-2"
-                  />
-                  Para Yatırma
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="transactionType"
-                    value="withdraw"
-                    checked={transactionType === 'withdraw'}
-                    onChange={(e) => setTransactionType(e.target.value as any)}
-                    className="mr-2"
-                  />
-                  Para Çekme
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="transactionType"
-                    value="transfer"
-                    checked={transactionType === 'transfer'}
-                    onChange={(e) => setTransactionType(e.target.value as any)}
-                    className="mr-2"
-                  />
-                  Transfer
-                </label>
+            {/* Right Column - Transaction Form */}
+            <div className="lg:col-span-2">
+              <div className="bg-white rounded-xl shadow-chart border border-gray-200 p-6">
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-black-1">İşlem Detayları</h3>
+                </div>
+
+                {/* Transfer Target Account */}
+                {transactionType === 'transfer' && (
+                  <div className="mb-6">
+                    <label className="block text-sm font-medium text-gray-700 mb-3">
+                      Hedef IBAN
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={targetIban}
+                        onChange={(e) => setTargetIban(e.target.value)}
+                        placeholder="TR00 0000 0000 0000 0000 0000 00"
+                        className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-bankGradient focus:border-bankGradient transition-colors text-lg"
+                      />
+                    </div>
+                    <p className="text-sm text-gray-500 mt-2 flex items-center gap-2">
+                      <img src="/icons/arrow-right.svg" alt="Info" className="w-4 h-4" />
+                      Para göndermek istediğiniz hesabın IBAN numarasını girin
+                    </p>
+                  </div>
+                )}
+
+                {/* Transaction Form */}
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-3">
+                      Tutar {selectedAccount && `(${getCurrencyTypeLabel(selectedAccount.currencyType)})`}
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0.01"
+                        value={amount}
+                        onChange={(e) => setAmount(e.target.value)}
+                        placeholder="0.00"
+                        className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-bankGradient focus:border-bankGradient transition-colors text-lg"
+                        required
+                      />
+                      {selectedAccount && (
+                        <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                          <span className="text-sm font-medium text-gray-500">
+                            {getCurrencyTypeLabel(selectedAccount.currencyType)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-3">
+                      Açıklama
+                    </label>
+                    <textarea
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      placeholder="İşlem açıklaması girin (opsiyonel)"
+                      className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-bankGradient focus:border-bankGradient transition-colors resize-none"
+                      rows={3}
+                    />
+                  </div>
+
+                  {error && (
+                    <div className="bg-pink-25 border border-pink-100 rounded-lg p-4">
+                      <div className="flex items-center gap-2">
+                        <img src="/icons/arrow-down.svg" alt="Error" className="w-4 h-4 text-pink-600" />
+                        <span className="text-pink-700 font-medium">Hata</span>
+                      </div>
+                      <p className="text-pink-600 text-sm mt-1">{error}</p>
+                    </div>
+                  )}
+
+                  {success && (
+                    <div className="bg-success-25 border border-success-100 rounded-lg p-4">
+                      <div className="flex items-center gap-2">
+                        <img src="/icons/arrow-up.svg" alt="Success" className="w-4 h-4 text-success-600" />
+                        <span className="text-success-700 font-medium">Başarılı</span>
+                      </div>
+                      <p className="text-success-600 text-sm mt-1">{success}</p>
+                    </div>
+                  )}
+
+                  <Button 
+                    type="submit" 
+                    disabled={loading}
+                    className="w-full bg-bank-gradient hover:bg-bankGradient text-white font-semibold py-4 px-6 rounded-lg transition-all duration-200 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                  >
+                    {loading ? (
+                      <div className="flex items-center justify-center gap-2">
+                        <img src="/icons/loader.svg" alt="Loading" className="w-4 h-4 animate-spin" />
+                        İşleniyor...
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center">
+                        {transactionType === 'deposit' ? 'Para Yatır' :
+                         transactionType === 'withdraw' ? 'Para Çek' : 'Transfer Yap'}
+                      </div>
+                    )}
+                  </Button>
+                </form>
               </div>
             </div>
-
-            {/* Transfer Target Account */}
-            {transactionType === 'transfer' && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Hedef IBAN
-                </label>
-                <input
-                  type="text"
-                  value={targetIban}
-                  onChange={(e) => setTargetIban(e.target.value)}
-                  placeholder="TR00 0000 0000 0000 0000 0000 00"
-                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-bankGradient"
-                />
-                <p className="text-sm text-gray-500 mt-1">
-                  Para göndermek istediğiniz hesabın IBAN numarasını girin
-                </p>
-              </div>
-            )}
-
-            {/* Transaction Form */}
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Tutar {selectedAccount && `(${getCurrencyTypeLabel(selectedAccount.currencyType)})`}
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0.01"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  placeholder="0.00"
-                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-bankGradient"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Açıklama
-                </label>
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="İşlem açıklaması girin"
-                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-bankGradient"
-                  rows={3}
-                  required
-                />
-              </div>
-
-              {error && (
-                <div className="text-red-500 text-sm bg-red-50 p-3 rounded-md">
-                  {error}
-                </div>
-              )}
-
-              {success && (
-                <div className="text-green-500 text-sm bg-green-50 p-3 rounded-md">
-                  {success}
-                </div>
-              )}
-
-              <Button 
-                type="submit" 
-                disabled={loading}
-                className="w-full bg-bankGradient text-white"
-              >
-                {loading ? 'İşleniyor...' : 
-                  transactionType === 'deposit' ? 'Para Yatır' :
-                  transactionType === 'withdraw' ? 'Para Çek' : 'Transfer Yap'
-                }
-              </Button>
-            </form>
           </div>
         )}
       </div>
-      
-      {/* Transaction Confirmation Modal */}
-      <TransactionConfirmModal
-        isOpen={showConfirmModal}
-        onClose={() => {
-          setShowConfirmModal(false);
-          setPendingTransaction(null);
-        }}
-        onConfirm={handleConfirmTransaction}
-        transactionType={pendingTransaction?.type || 'deposit'}
-        transactionData={pendingTransaction || {}}
-        getCurrencySymbol={getCurrencySymbol}
-      />
     </section>
   );
 };

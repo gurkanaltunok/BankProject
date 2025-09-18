@@ -6,5 +6,6 @@ namespace BankProject.Business.Abstract
     {
         AuthResultDTO Register(UserRegisterDTO dto);
         AuthResultDTO Login(LoginDTO dto);
+        AuthResultDTO ChangePassword(int userId, string currentPassword, string newPassword);
     }
 }

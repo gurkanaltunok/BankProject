@@ -1,6 +1,8 @@
 ﻿using BankProject.Business.Abstract;
 using BankProject.Business.DTOs;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace BankProject.API.Controllers
 {
@@ -40,6 +42,31 @@ namespace BankProject.API.Controllers
                 UserId = result.UserId,
                 RoleId = result.RoleId
             });
+        }
+
+        [HttpPost("change-password")]
+        [Authorize]
+        public IActionResult ChangePassword([FromBody] ChangePasswordDTO dto)
+        {
+            try
+            {
+                // Get current user ID from token
+                var userIdClaim = User.FindFirst("UserId");
+                if (userIdClaim == null)
+                    return Unauthorized();
+
+                var userId = int.Parse(userIdClaim.Value);
+                var result = _authService.ChangePassword(userId, dto.CurrentPassword, dto.NewPassword);
+
+                if (!result.Success)
+                    return BadRequest(result.Message);
+
+                return Ok(new { Message = "Şifre başarıyla değiştirildi." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
         }
     }
 }

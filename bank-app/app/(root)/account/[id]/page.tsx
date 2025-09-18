@@ -18,6 +18,15 @@ interface Transaction {
   transactionDate: string;
   transactionType: number;
   fee?: number;
+  feeInTRY?: number;
+  exchangeRate?: {
+    exchangeRateId: number;
+    fromCurrency: string;
+    toCurrency: string;
+    rate: number;
+    date: string;
+    source?: string;
+  };
   targetAccountId?: number;
 }
 
@@ -67,10 +76,16 @@ const AccountDetail = () => {
       console.log('SelectedAccount id:', selectedAccount.id, 'type:', typeof selectedAccount.id);
       console.log('Number(selectedAccount.id):', Number(selectedAccount.id));
       
-      let filtered = transactions.filter(t => 
-        (t.accountId === Number(selectedAccount.id) || t.targetAccountId === Number(selectedAccount.id)) &&
-        t.transactionType !== 4 // İşlem ücreti transaction'larını filtrele
-      );
+      let filtered = transactions.filter(t => {
+        const isAccountTransaction = (t.accountId === Number(selectedAccount.id) || t.targetAccountId === Number(selectedAccount.id));
+        
+        // Admin kullanıcıları fee transaction'larını görebilir, normal kullanıcılar göremez
+        if (user?.roleId === 2) {
+          return isAccountTransaction; // Admin: tüm transaction'ları göster
+        } else {
+          return isAccountTransaction && t.transactionType !== 4; // Normal kullanıcı: fee transaction'larını gizle
+        }
+      });
       console.log('Filtered by account (excluding fees):', filtered);
 
       const now = new Date();
@@ -99,7 +114,7 @@ const AccountDetail = () => {
       console.log('No transactions or selectedAccount, setting empty array');
       setFilteredTransactions([]);
     }
-  }, [transactions, selectedAccount, dateFilter]);
+  }, [transactions, selectedAccount, dateFilter, user]);
 
   const getTransactionTypeLabel = (type: number, transaction: any) => {
     switch (type) {
@@ -121,6 +136,7 @@ const AccountDetail = () => {
       case 1: return 'text-green-600';
       case 2: return 'text-red-600';
       case 3: return 'text-blue-600';
+      case 4: return 'text-orange-600'; // Fee transaction'ları için turuncu
       default: return 'text-gray-600';
     }
   };
@@ -313,11 +329,13 @@ const AccountDetail = () => {
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
                           <span className={`font-semibold ${
                             (transaction.transactionType === 1) || 
-                            (transaction.transactionType === 3 && transaction.targetAccountId === selectedAccount?.id) 
+                            (transaction.transactionType === 3 && transaction.targetAccountId === selectedAccount?.id) ||
+                            (transaction.transactionType === 4) // Fee transaction'ları pozitif göster
                               ? 'text-green-600' : 'text-red-600'
                           }`}>
                             {(transaction.transactionType === 1) || 
-                             (transaction.transactionType === 3 && transaction.targetAccountId === selectedAccount?.id) 
+                             (transaction.transactionType === 3 && transaction.targetAccountId === selectedAccount?.id) ||
+                             (transaction.transactionType === 4) // Fee transaction'ları pozitif göster
                               ? '+' : '-'}
                             {getCurrencySymbol(selectedAccount.currencyType || 0)}
                             {Math.abs(transaction.amount).toLocaleString('tr-TR', { 
@@ -328,13 +346,28 @@ const AccountDetail = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {transaction.fee ? (
-                            <>
-                              {getCurrencySymbol(selectedAccount.currencyType || 0)}
-                              {transaction.fee.toLocaleString('tr-TR', { 
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2
-                              })}
-                            </>
+                            <div className="space-y-1">
+                              <div>
+                                {getCurrencySymbol(selectedAccount.currencyType || 0)}
+                                {transaction.fee.toLocaleString('tr-TR', { 
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2
+                                })}
+                              </div>
+                              {transaction.feeInTRY && transaction.feeInTRY !== transaction.fee && (
+                                <div className="text-xs text-gray-500">
+                                  (₺{transaction.feeInTRY.toLocaleString('tr-TR', { 
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2
+                                  })})
+                                </div>
+                              )}
+                              {transaction.exchangeRate && (
+                                <div className="text-xs text-blue-600">
+                                  Kur: {transaction.exchangeRate.rate.toFixed(4)}
+                                </div>
+                              )}
+                            </div>
                           ) : '-'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">

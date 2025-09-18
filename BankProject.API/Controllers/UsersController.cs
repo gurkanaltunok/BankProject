@@ -78,7 +78,6 @@ public class UsersController : ControllerBase
         existingUser.Surname = dto.Surname;
         existingUser.Email = dto.Email;
         existingUser.PhoneNumber = dto.PhoneNumber;
-        existingUser.Address = dto.Address;
 
         var updatedUser = _userService.UpdateUser(existingUser);
         return Ok(updatedUser);
@@ -96,13 +95,19 @@ public class UsersController : ControllerBase
     }
 
 
-    [HttpPost("change-password")]
-    public IActionResult ChangePassword([FromBody] ChangePasswordDTO dto)
+
+    [HttpPut("{id}/role")]
+    public IActionResult UpdateUserRole(int id, [FromBody] UpdateRoleDTO dto)
     {
         try
         {
-            _userService.ChangePassword(dto.UserId, dto.NewPassword);
-            return Ok(new { Message = "Şifre başarıyla güncellendi." });
+            var user = _userService.GetUserById(id);
+            if (user == null)
+                return NotFound();
+
+            user.RoleId = dto.RoleId;
+            var updatedUser = _userService.UpdateUser(user);
+            return Ok(updatedUser);
         }
         catch (Exception ex)
         {

@@ -14,6 +14,8 @@ namespace BankProject.DataAccess
         public DbSet<Account> Accounts { get; set; } = null!;
         public DbSet<Transaction> Transactions { get; set; } = null!;
         public DbSet<BalanceHistory> BalanceHistories { get; set; } = null!;
+        public DbSet<Address> Addresses { get; set; } = null!;
+        public DbSet<ExchangeRate> ExchangeRates { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -60,6 +62,22 @@ namespace BankProject.DataAccess
             modelBuilder.Entity<User>()
                 .Property(u => u.RoleId)
                 .HasDefaultValue(1);
+
+            // ExchangeRate konfigürasyonu
+            modelBuilder.Entity<ExchangeRate>()
+                .Property(e => e.Rate)
+                .HasPrecision(18, 6);
+
+            modelBuilder.Entity<ExchangeRate>()
+                .HasIndex(e => new { e.FromCurrency, e.ToCurrency, e.Date })
+                .IsUnique();
+
+            // Transaction - ExchangeRate ilişkisi
+            modelBuilder.Entity<Transaction>()
+                .HasOne(t => t.ExchangeRate)
+                .WithMany(e => e.Transactions)
+                .HasForeignKey(t => t.ExchangeRateId)
+                .OnDelete(DeleteBehavior.SetNull);
 
         }
     }

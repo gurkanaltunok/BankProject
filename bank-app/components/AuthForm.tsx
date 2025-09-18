@@ -1,14 +1,16 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { Button } from './ui/button';
 import Link from 'next/link';
+import { apiService } from '@/lib/api';
 
 interface AuthFormProps {
   type: 'sign-in' | 'sign-up';
 }
+
 
 const AuthForm = ({ type }: AuthFormProps) => {
   const router = useRouter();
@@ -22,17 +24,222 @@ const AuthForm = ({ type }: AuthFormProps) => {
     TCKN: '',
     Email: '',
     Password: '',
+    ConfirmPassword: '',
     PhoneNumber: '',
-    Address: '',
-    RoleId: 1, // Default to Customer role
+    BirthDate: '',
+    Country: 'Türkiye',
+    City: '',
+    District: '',
+    Neighborhood: '',
+    AddressDetail: '',
+    RoleId: 1,
   });
+
+  const [selectedCity, setSelectedCity] = useState('');
+  const [selectedDistrict, setSelectedDistrict] = useState('');
+  const [cities, setCities] = useState<any[]>([]);
+  const [districts, setDistricts] = useState<any[]>([]);
+  const [loadingCities, setLoadingCities] = useState(false);
+  const [loadingDistricts, setLoadingDistricts] = useState(false);
+
+  // Şehirleri yükle
+  useEffect(() => {
+    if (type === 'sign-up') {
+      loadCities();
+    }
+  }, [type]);
+
+  const loadCities = async () => {
+    try {
+      setLoadingCities(true);
+      const citiesData = await apiService.getCities();
+      setCities(citiesData);
+    } catch (error) {
+      console.error('Şehirler yüklenirken hata:', error);
+    } finally {
+      setLoadingCities(false);
+    }
+  };
+
+  const loadDistricts = async (cityId: number) => {
+    try {
+      setLoadingDistricts(true);
+      const districtsData = await apiService.getDistricts(cityId);
+      setDistricts(districtsData);
+    } catch (error) {
+      console.error('İlçeler yüklenirken hata:', error);
+    } finally {
+      setLoadingDistricts(false);
+    }
+  };
+
+
+  // Telefon numarası formatlama fonksiyonu
+  const formatPhoneNumber = (value: string) => {
+    let formatted = value.replace(/\D/g, ''); // Sadece rakamlar
+    
+    // Maksimum 11 hane (0 dahil)
+    if (formatted.length > 11) {
+      formatted = formatted.substring(0, 11);
+    }
+    
+    // Eğer 0 ile başlamıyorsa 0 ekle
+    if (formatted.length > 0 && !formatted.startsWith('0')) {
+      formatted = '0' + formatted;
+    }
+    
+    // Formatla
+    if (formatted.length >= 1) {
+      if (formatted.length <= 1) {
+        formatted = formatted;
+      } else if (formatted.length <= 4) {
+        formatted = formatted.replace(/^(\d{1})(\d{0,3})$/, '$1($2');
+      } else if (formatted.length <= 7) {
+        formatted = formatted.replace(/^(\d{1})(\d{3})(\d{0,3})$/, '$1($2)$3');
+      } else if (formatted.length <= 9) {
+        formatted = formatted.replace(/^(\d{1})(\d{3})(\d{3})(\d{0,2})$/, '$1($2)$3 $4');
+      } else if (formatted.length <= 11) {
+        formatted = formatted.replace(/^(\d{1})(\d{3})(\d{3})(\d{2})(\d{0,2})$/, '$1($2)$3 $4 $5');
+      }
+    }
+    
+    return formatted;
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
+    
+    // Telefon numarası formatı
+    if (name === 'PhoneNumber') {
+      const formatted = formatPhoneNumber(value);
+      setFormData(prev => ({ ...prev, [name]: formatted }));
+      return;
+    }
+
+    // Şifre alanları - sadece rakam
+    if (name === 'Password' || name === 'ConfirmPassword') {
+      const numericValue = value.replace(/\D/g, ''); // Sadece rakamlar
+      if (numericValue.length <= 6) {
+        setFormData(prev => ({ ...prev, [name]: numericValue }));
+      }
+      return;
+    }
+
+    // TCKN - sadece rakam
+    if (name === 'TCKN') {
+      const numericValue = value.replace(/\D/g, ''); // Sadece rakamlar
+      if (numericValue.length <= 11) {
+        setFormData(prev => ({ ...prev, [name]: numericValue }));
+      }
+      return;
+    }
+
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleCityChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const cityName = e.target.value;
+    const selectedCityData = cities.find(city => city.name === cityName);
+    
+    setSelectedCity(cityName);
+    setSelectedDistrict('');
+    setDistricts([]);
+    
+    setFormData(prev => ({ 
+      ...prev, 
+      City: cityName, 
+      District: '',
+      Neighborhood: '',
+      AddressDetail: ''
     }));
+
+    // İlçeleri yükle
+    if (selectedCityData) {
+      loadDistricts(selectedCityData.id);
+    }
+  };
+
+  const handleDistrictChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const districtName = e.target.value;
+    const selectedDistrictData = districts.find(district => district.name === districtName);
+    
+    setSelectedDistrict(districtName);
+    
+    setFormData(prev => ({ 
+      ...prev, 
+      District: districtName,
+      Neighborhood: '',
+      AddressDetail: ''
+    }));
+
+  };
+
+
+  const validateForm = () => {
+    // Sign-in validasyonu
+    if (type === 'sign-in') {
+      // TCKN kontrolü
+      if (!formData.TCKN || formData.TCKN.length !== 11) {
+        setError('TC Kimlik No 11 haneli olmalıdır');
+        return false;
+      }
+
+      // Şifre kontrolü
+      if (!formData.Password || formData.Password.length !== 6) {
+        setError('Şifre 6 haneli olmalıdır');
+        return false;
+      }
+
+      if (!/^\d{6}$/.test(formData.Password)) {
+        setError('Şifre sadece rakamlardan oluşmalıdır');
+        return false;
+      }
+    }
+
+    if (type === 'sign-up') {
+      // Şifre kontrolü
+      if (formData.Password.length !== 6) {
+        setError('Şifre 6 haneli olmalıdır');
+        return false;
+      }
+
+      if (!/^\d{6}$/.test(formData.Password)) {
+        setError('Şifre sadece rakamlardan oluşmalıdır');
+        return false;
+      }
+
+      if (formData.Password !== formData.ConfirmPassword) {
+        setError('Şifreler uyuşmuyor');
+        return false;
+      }
+
+      // TCKN kontrolü
+      if (formData.TCKN.length !== 11) {
+        setError('TC Kimlik No 11 haneli olmalıdır');
+        return false;
+      }
+
+      // Telefon kontrolü
+      const phoneDigits = formData.PhoneNumber.replace(/\D/g, '');
+      if (phoneDigits.length !== 11) {
+        setError('Telefon numarası 11 haneli olmalıdır');
+        return false;
+      }
+
+      // Doğum tarihi kontrolü
+      if (!formData.BirthDate) {
+        setError('Doğum tarihi gereklidir');
+        return false;
+      }
+
+      // Adres kontrolü
+      if (!formData.City || !formData.District || !formData.Neighborhood || !formData.AddressDetail) {
+        setError('Tüm adres bilgileri gereklidir');
+        return false;
+      }
+    }
+
+    return true;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -40,17 +247,38 @@ const AuthForm = ({ type }: AuthFormProps) => {
     setError('');
     setSuccess('');
 
+    if (!validateForm()) {
+      return;
+    }
+
     try {
       if (type === 'sign-in') {
+        console.log('Login form data:', { TCKN: formData.TCKN, Password: formData.Password });
         await login(formData.TCKN, formData.Password);
         router.push('/');
       } else {
-        await register(formData);
+        // Telefon numarasını sadece rakamlara çevir (0'dan sonrasını al)
+        const phoneDigits = formData.PhoneNumber.replace(/\D/g, '');
+        const cleanPhone = phoneDigits.substring(1); // 0'ı çıkar
+
+        // Adres bilgilerini birleştir
+        const fullAddress = `${formData.AddressDetail}, ${formData.Neighborhood}, ${formData.District}, ${formData.City}, ${formData.Country}`;
+
+        // ConfirmPassword'ü çıkararak registerData oluştur
+        const { ConfirmPassword, ...formDataWithoutConfirm } = formData;
+        const registerData = {
+          ...formDataWithoutConfirm,
+          PhoneNumber: cleanPhone,
+          Address: fullAddress,
+          BirthDate: new Date(formData.BirthDate),
+          Password: formData.Password,
+        };
+
+        await register(registerData);
         setSuccess('Hesap başarıyla oluşturuldu. Lütfen giriş yapın.');
-        // Optionally redirect to sign-in page
         setTimeout(() => {
           router.push('/sign-in');
-        }, 2000);
+        }, 3000);
       }
     } catch (err: any) {
       setError(err.message || 'Bir hata oluştu');
@@ -58,7 +286,7 @@ const AuthForm = ({ type }: AuthFormProps) => {
   };
 
   return (
-    <div className="w-full max-w-md">
+    <div className="w-full max-w-2xl">
       {/* Modern Card Design */}
       <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-2xl border border-white/20 p-8">
         {/* Header */}
@@ -95,68 +323,255 @@ const AuthForm = ({ type }: AuthFormProps) => {
         <form onSubmit={handleSubmit} className="space-y-5">
           {type === 'sign-up' && (
             <>
-              <div className="grid grid-cols-2 gap-4">
+              {/* Kişisel Bilgiler */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">Kişisel Bilgiler</h3>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Ad *</label>
+                    <input
+                      type="text"
+                      name="Name"
+                      value={formData.Name}
+                      onChange={handleInputChange}
+                      placeholder="Adınız"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white/50 backdrop-blur-sm"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Soyad *</label>
+                    <input
+                      type="text"
+                      name="Surname"
+                      value={formData.Surname}
+                      onChange={handleInputChange}
+                      placeholder="Soyadınız"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white/50 backdrop-blur-sm"
+                      required
+                    />
+                  </div>
+                </div>
+
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">Ad</label>
+                  <label className="text-sm font-medium text-gray-700">TC Kimlik No *</label>
                   <input
                     type="text"
-                    name="Name"
-                    value={formData.Name}
+                    name="TCKN"
+                    value={formData.TCKN}
                     onChange={handleInputChange}
-                    placeholder="Adınız"
+                    placeholder="12345678901"
+                    maxLength={11}
                     className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white/50 backdrop-blur-sm"
                     required
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">Soyad</label>
+                  <label className="text-sm font-medium text-gray-700">Doğum Tarihi *</label>
                   <input
-                    type="text"
-                    name="Surname"
-                    value={formData.Surname}
+                    type="date"
+                    name="BirthDate"
+                    value={formData.BirthDate}
                     onChange={handleInputChange}
-                    placeholder="Soyadınız"
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white/50 backdrop-blur-sm"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">E-posta *</label>
+                  <input
+                    type="email"
+                    name="Email"
+                    value={formData.Email}
+                    onChange={handleInputChange}
+                    placeholder="ornek@email.com"
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white/50 backdrop-blur-sm"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Telefon *</label>
+                  <input
+                    type="tel"
+                    name="PhoneNumber"
+                    value={formData.PhoneNumber}
+                    onChange={handleInputChange}
+                    onKeyDown={(e) => {
+                      // Sadece rakam, backspace, delete, tab, enter, arrow keys'a izin ver
+                      const allowedKeys = ['Backspace', 'Delete', 'Tab', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
+                      if (!allowedKeys.includes(e.key) && !/^\d$/.test(e.key)) {
+                        e.preventDefault();
+                      }
+                    }}
+                    onFocus={(e) => {
+                      if (!e.target.value) {
+                        setFormData(prev => ({ ...prev, PhoneNumber: '0(5' }));
+                      }
+                    }}
+                    onPaste={(e) => {
+                      e.preventDefault();
+                      const pastedText = e.clipboardData.getData('text');
+                      const formatted = formatPhoneNumber(pastedText);
+                      if (formatted.length > 0) {
+                        setFormData(prev => ({ ...prev, PhoneNumber: formatted }));
+                      }
+                    }}
+                    placeholder="0(555) 555 55 55"
                     className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white/50 backdrop-blur-sm"
                     required
                   />
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">E-posta</label>
-                <input
-                  type="email"
-                  name="Email"
-                  value={formData.Email}
-                  onChange={handleInputChange}
-                  placeholder="ornek@email.com"
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white/50 backdrop-blur-sm"
-                  required
-                />
+              {/* Şifre Bilgileri */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">Şifre Bilgileri</h3>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Şifre (6 haneli) *</label>
+                    <input
+                      type="password"
+                      name="Password"
+                      value={formData.Password}
+                      onChange={handleInputChange}
+                      placeholder="123456"
+                      maxLength={6}
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white/50 backdrop-blur-sm"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Şifre Tekrar *</label>
+                    <input
+                      type="password"
+                      name="ConfirmPassword"
+                      value={formData.ConfirmPassword}
+                      onChange={handleInputChange}
+                      placeholder="123456"
+                      maxLength={6}
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white/50 backdrop-blur-sm"
+                      required
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Telefon</label>
-                <input
-                  type="tel"
-                  name="PhoneNumber"
-                  value={formData.PhoneNumber}
-                  onChange={handleInputChange}
-                  placeholder="0555 123 45 67"
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white/50 backdrop-blur-sm"
-                  required
-                />
-              </div>
+              {/* Adres Bilgileri */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">Adres Bilgileri</h3>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Ülke *</label>
+                    <select
+                      name="Country"
+                      value={formData.Country}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white/50 backdrop-blur-sm"
+                      required
+                    >
+                      <option value="Türkiye">Türkiye</option>
+                    </select>
+                  </div>
 
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">İl *</label>
+                    <select
+                      name="City"
+                      value={selectedCity}
+                      onChange={handleCityChange}
+                      disabled={loadingCities}
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white/50 backdrop-blur-sm disabled:bg-gray-100"
+                      required
+                    >
+                      <option value="">{loadingCities ? 'Yükleniyor...' : 'İl Seçiniz'}</option>
+                      {cities.map(city => (
+                        <option key={city.id} value={city.name}>{city.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">İlçe *</label>
+                    <select
+                      name="District"
+                      value={selectedDistrict}
+                      onChange={handleDistrictChange}
+                      disabled={!selectedCity || loadingDistricts}
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white/50 backdrop-blur-sm disabled:bg-gray-100"
+                      required
+                    >
+                      <option value="">{loadingDistricts ? 'Yükleniyor...' : 'İlçe Seçiniz'}</option>
+                      {districts.map(district => (
+                        <option key={district.id} value={district.name}>{district.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Mahalle *</label>
+                    <input
+                      type="text"
+                      name="Neighborhood"
+                      value={formData.Neighborhood}
+                      onChange={handleInputChange}
+                      placeholder="Mahalle adını giriniz"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white/50 backdrop-blur-sm"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Adres Detayı *</label>
+                  <textarea
+                    name="AddressDetail"
+                    value={formData.AddressDetail}
+                    onChange={(e) => setFormData(prev => ({ ...prev, AddressDetail: e.target.value }))}
+                    placeholder="Cadde, sokak, bina no, daire no vb."
+                    rows={3}
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white/50 backdrop-blur-sm resize-none"
+                    required
+                  />
+                </div>
+              </div>
+            </>
+          )}
+
+          {type === 'sign-in' && (
+            <>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Adres</label>
+                <label className="text-sm font-medium text-gray-700">TC Kimlik No</label>
                 <input
                   type="text"
-                  name="Address"
-                  value={formData.Address}
+                  name="TCKN"
+                  value={formData.TCKN}
                   onChange={handleInputChange}
-                  placeholder="Adresiniz"
+                  placeholder="12345678901"
+                  maxLength={11}
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white/50 backdrop-blur-sm"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Şifre</label>
+                <input
+                  type="password"
+                  name="Password"
+                  value={formData.Password}
+                  onChange={handleInputChange}
+                  placeholder="6 haneli şifreniz"
+                  maxLength={6}
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white/50 backdrop-blur-sm"
                   required
                 />
@@ -164,113 +579,48 @@ const AuthForm = ({ type }: AuthFormProps) => {
             </>
           )}
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">TC Kimlik No</label>
-            <input
-              type="text"
-              name="TCKN"
-              value={formData.TCKN}
-              onChange={handleInputChange}
-              placeholder="12345678901"
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white/50 backdrop-blur-sm"
-              required
-              maxLength={11}
-              minLength={11}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">Şifre</label>
-            <input
-              type="password"
-              name="Password"
-              value={formData.Password}
-              onChange={handleInputChange}
-              placeholder="••••••••"
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white/50 backdrop-blur-sm"
-              required
-              minLength={6}
-            />
-          </div>
-
-          {/* Error/Success Messages */}
+          {/* Error & Success Messages */}
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl flex items-center gap-2">
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-              </svg>
-              {error}
+            <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
+              <p className="text-red-600 text-sm">{error}</p>
             </div>
           )}
 
           {success && (
-            <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl flex items-center gap-2">
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-              </svg>
-              {success}
+            <div className="p-4 bg-green-50 border border-green-200 rounded-xl">
+              <p className="text-green-600 text-sm">{success}</p>
             </div>
           )}
 
           {/* Submit Button */}
-          <button 
-            type="submit" 
+          <Button
+            type="submit"
             disabled={loading}
-            className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+            className="w-full py-3 bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? (
               <div className="flex items-center justify-center gap-2">
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                İşleniyor...
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                {type === 'sign-in' ? 'Giriş yapılıyor...' : 'Hesap oluşturuluyor...'}
               </div>
             ) : (
-              <div className="flex items-center justify-center gap-2">
-                {type === 'sign-in' ? (
-                  <>
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
-                    </svg>
-                    Giriş Yap
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                    </svg>
-                    Hesap Oluştur
-                  </>
-                )}
-              </div>
+              type === 'sign-in' ? 'Giriş Yap' : 'Hesap Oluştur'
             )}
-          </button>
+          </Button>
+
+          {/* Switch Form Type */}
+          <div className="text-center">
+            <p className="text-gray-600">
+              {type === 'sign-in' ? 'Hesabınız yok mu?' : 'Zaten hesabınız var mı?'}
+              <Link 
+                href={type === 'sign-in' ? '/sign-up' : '/sign-in'}
+                className="ml-2 text-blue-600 hover:text-blue-800 font-semibold transition-colors duration-200"
+              >
+                {type === 'sign-in' ? 'Hesap oluşturun' : 'Giriş yapın'}
+              </Link>
+            </p>
+          </div>
         </form>
-
-        {/* Footer */}
-        <div className="mt-6 text-center">
-          <p className="text-gray-600 text-sm">
-            {type === 'sign-in' 
-              ? 'Henüz hesabınız yok mu?'
-              : 'Zaten hesabınız var mı?'
-            }
-            {' '}
-            <Link 
-              href={type === 'sign-in' ? '/sign-up' : '/sign-in'}
-              className="text-blue-600 hover:text-blue-700 font-semibold transition-colors duration-200"
-            >
-              {type === 'sign-in' ? 'Hesap Oluştur' : 'Giriş Yap'}
-            </Link>
-          </p>
-        </div>
-      </div>
-
-      {/* Security Badge */}
-      <div className="mt-6 text-center">
-        <div className="inline-flex items-center gap-2 text-xs text-gray-500 bg-white/50 backdrop-blur-sm px-4 py-2 rounded-full border border-white/20">
-          <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-          </svg>
-          SSL ile güvenli bağlantı
-        </div>
       </div>
     </div>
   );

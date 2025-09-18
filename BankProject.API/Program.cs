@@ -48,6 +48,17 @@ builder.Services.AddScoped<IBalanceHistoryRepository, BalanceHistoryRepository>(
 
 builder.Services.AddScoped<IAuthService, AuthManager>();
 
+// Address services
+builder.Services.AddScoped<IAddressRepository, AddressRepository>();
+builder.Services.AddScoped<IAddressService, AddressService>();
+
+// Exchange rate service
+builder.Services.AddScoped<IExchangeRateService, ExchangeRateService>();
+builder.Services.AddScoped<IExchangeRateRepository, ExchangeRateRepository>();
+
+// HttpClient for external APIs
+builder.Services.AddHttpClient();
+
 // Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>

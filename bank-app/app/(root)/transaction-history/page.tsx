@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import HeaderBox from '@/components/HeaderBox';
 
 const TransactionHistory = () => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const { accounts, getCurrencySymbol } = useAccounts();
   const { transactions, loading, getTransactionsByDateRange, getTransactionsByAccount } = useTransactions();
   const router = useRouter();
@@ -168,8 +168,8 @@ const TransactionHistory = () => {
     if (isFee) {
       return {
         type: 'İşlem Ücreti',
-        color: 'text-red-600',
-        sign: '-'
+        color: 'text-orange-600',
+        sign: '+'
       };
     }
     
@@ -327,7 +327,7 @@ const TransactionHistory = () => {
             <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
               <div className="px-6 py-4 border-b">
                 <h3 className="text-18 font-semibold">
-                  İşlemler ({transactions.filter(t => t.transactionType !== 4).length})
+                  İşlemler ({user?.roleId === 2 ? transactions.length : transactions.filter(t => t.transactionType !== 4).length})
                 </h3>
               </div>
 
@@ -370,8 +370,12 @@ const TransactionHistory = () => {
                     <tbody className="bg-white divide-y divide-gray-200">
                       {transactions
                         .filter(transaction => {
-                          // İşlem ücreti transaction'larını filtrele (transactionType === 4)
-                          return transaction.transactionType !== 4;
+                          // Admin kullanıcıları fee transaction'larını görebilir, normal kullanıcılar göremez
+                          if (user?.roleId === 2) {
+                            return true; // Admin: tüm transaction'ları göster
+                          } else {
+                            return transaction.transactionType !== 4; // Normal kullanıcı: fee transaction'larını gizle
+                          }
                         })
                         .map((transaction, index) => {
                         const account = accounts.find(acc => acc.id === transaction.accountId);
@@ -410,14 +414,31 @@ const TransactionHistory = () => {
                               </span>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {transaction.fee ? (
-                                <>
-                                  {getCurrencySymbol(account?.currencyType || 0)}
-                                  {transaction.fee.toLocaleString('tr-TR', { 
-                                    minimumFractionDigits: 2,
-                                    maximumFractionDigits: 2
-                                  })}
-                                </>
+                              {transaction.transactionType === 4 ? (
+                                <span className="text-orange-600 text-xs">İşlem Ücreti</span>
+                              ) : transaction.fee ? (
+                                <div className="space-y-1">
+                                  <div>
+                                    {getCurrencySymbol(account?.currencyType || 0)}
+                                    {transaction.fee.toLocaleString('tr-TR', { 
+                                      minimumFractionDigits: 2,
+                                      maximumFractionDigits: 2
+                                    })}
+                                  </div>
+                                  {transaction.feeInTRY && transaction.feeInTRY !== transaction.fee && (
+                                    <div className="text-xs text-gray-500">
+                                      (₺{transaction.feeInTRY.toLocaleString('tr-TR', { 
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2
+                                      })})
+                                    </div>
+                                  )}
+                                  {transaction.exchangeRate && (
+                                    <div className="text-xs text-blue-600">
+                                      Kur: {transaction.exchangeRate.rate.toFixed(4)}
+                                    </div>
+                                  )}
+                                </div>
                               ) : '-'}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
@@ -437,13 +458,13 @@ const TransactionHistory = () => {
             </div>
 
             {/* Summary */}
-            {transactions.filter(t => t.transactionType !== 4).length > 0 && (
+            {(user?.roleId === 2 ? transactions.length : transactions.filter(t => t.transactionType !== 4).length) > 0 && (
               <div className="bg-blue-50 p-4 rounded-lg">
                 <h4 className="font-semibold text-blue-900 mb-2">Özet</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
                   <div>
                     <span className="text-blue-700">Toplam İşlem: </span>
-                    <span className="font-semibold">{transactions.filter(t => t.transactionType !== 4).length}</span>
+                    <span className="font-semibold">{user?.roleId === 2 ? transactions.length : transactions.filter(t => t.transactionType !== 4).length}</span>
                   </div>
                   <div>
                     <span className="text-green-700 font-semibold">Para Yatırma: </span>
@@ -469,6 +490,14 @@ const TransactionHistory = () => {
                       {transactions.filter(t => t.transactionType === 3 && t.accountId === selectedAccountId).length}
                     </span>
                   </div>
+                  {user?.roleId === 2 && (
+                    <div>
+                      <span className="text-orange-700 font-semibold">İşlem Ücreti: </span>
+                      <span className="font-bold text-orange-800">
+                        {transactions.filter(t => t.transactionType === 4).length}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

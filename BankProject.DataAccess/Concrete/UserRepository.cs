@@ -1,5 +1,6 @@
 ﻿using BankProject.DataAccess.Abstract;
 using BankProject.Entities;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -34,7 +35,7 @@ namespace BankProject.DataAccess.Concrete
 
         public List<User> GetAllUsers()
         {
-            return _context.Users.ToList();
+            return _context.Users.Include(u => u.Address).ToList();
         }
 
         public User GetUserById(int id)

@@ -11,14 +11,28 @@ const Profile = () => {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [userDetails, setUserDetails] = useState<any>(null);
+  const [addressDetails, setAddressDetails] = useState<any>(null);
   const [formData, setFormData] = useState({
     name: '',
     surname: '',
     email: '',
     phoneNumber: '',
-    address: '',
-    tckn: ''
+    tckn: '',
+    birthDate: '',
+    // Address fields
+    country: '',
+    city: '',
+    district: '',
+    neighborhood: '',
+    addressDetail: ''
   });
+  const [cities, setCities] = useState<any[]>([]);
+  const [districts, setDistricts] = useState<any[]>([]);
+  const [selectedCity, setSelectedCity] = useState('');
+  const [selectedDistrict, setSelectedDistrict] = useState('');
+  const [loadingCities, setLoadingCities] = useState(false);
+  const [loadingDistricts, setLoadingDistricts] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -28,16 +42,91 @@ const Profile = () => {
 
   useEffect(() => {
     if (user) {
-      setFormData({
-        name: user.name || '',
-        surname: user.surname || '',
-        email: user.email || '',
-        phoneNumber: user.phoneNumber || '',
-        address: user.address || '',
-        tckn: user.tckn || ''
-      });
+      loadUserDetails();
+      loadCities();
     }
   }, [user]);
+
+  const loadCities = async () => {
+    try {
+      setLoadingCities(true);
+      const citiesData = await apiService.getCities();
+      setCities(citiesData);
+    } catch (error) {
+      console.error('Şehirler yüklenirken hata:', error);
+    } finally {
+      setLoadingCities(false);
+    }
+  };
+
+  const loadDistricts = async (cityName: string) => {
+    try {
+      setLoadingDistricts(true);
+      const city = cities.find(c => c.name === cityName);
+      if (city) {
+        const districtsData = await apiService.getDistricts(city.id);
+        setDistricts(districtsData);
+      }
+    } catch (error) {
+      console.error('İlçeler yüklenirken hata:', error);
+    } finally {
+      setLoadingDistricts(false);
+    }
+  };
+
+
+  const loadUserDetails = async () => {
+    if (!user?.id) return;
+    
+    try {
+      setLoading(true);
+      // Get full user details
+      const userData = await apiService.getCurrentUser();
+      setUserDetails(userData);
+      
+      // Get address details
+      let addressData = null;
+      try {
+        addressData = await apiService.getAddressByUserId(user.id);
+        setAddressDetails(addressData);
+      } catch (addressError) {
+        console.log('Address not found, user may not have address yet');
+        setAddressDetails(null);
+      }
+      
+      // Set form data
+      setFormData({
+        name: userData.name || '',
+        surname: userData.surname || '',
+        email: userData.email || '',
+        phoneNumber: userData.phoneNumber || '',
+        tckn: userData.tckn || '',
+        birthDate: userData.birthDate ? new Date(userData.birthDate).toISOString().split('T')[0] : '',
+        country: addressData?.country || '',
+        city: addressData?.city || '',
+        district: addressData?.district || '',
+        neighborhood: addressData?.neighborhood || '',
+        addressDetail: addressData?.addressDetail || ''
+      });
+
+      // Set selected city and district for dropdowns
+      if (addressData?.city) {
+        setSelectedCity(addressData.city);
+        // Load districts for the selected city
+        const city = cities.find(c => c.name === addressData.city);
+        if (city) {
+          loadDistricts(addressData.city);
+        }
+      }
+      if (addressData?.district) {
+        setSelectedDistrict(addressData.district);
+      }
+    } catch (error) {
+      console.error('Kullanıcı bilgileri yüklenirken hata:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -47,20 +136,107 @@ const Profile = () => {
     }));
   };
 
+  const formatPhoneNumber = (value: string) => {
+    let formatted = value.replace(/\D/g, ''); // Sadece rakamlar
+
+    // Maksimum 11 hane (0 dahil)
+    if (formatted.length > 11) {
+      formatted = formatted.substring(0, 11);
+    }
+
+    // Eğer 0 ile başlamıyorsa 0 ekle
+    if (formatted.length > 0 && !formatted.startsWith('0')) {
+      formatted = '0' + formatted;
+    }
+
+    // Formatla
+    if (formatted.length >= 1) {
+      if (formatted.length <= 1) {
+        formatted = formatted;
+      } else if (formatted.length <= 4) {
+        formatted = formatted.replace(/^(\d{1})(\d{0,3})$/, '$1($2');
+      } else if (formatted.length <= 7) {
+        formatted = formatted.replace(/^(\d{1})(\d{3})(\d{0,3})$/, '$1($2)$3');
+      } else if (formatted.length <= 9) {
+        formatted = formatted.replace(/^(\d{1})(\d{3})(\d{3})(\d{0,2})$/, '$1($2)$3 $4');
+      } else if (formatted.length <= 11) {
+        formatted = formatted.replace(/^(\d{1})(\d{3})(\d{3})(\d{2})(\d{0,2})$/, '$1($2)$3 $4 $5');
+      }
+    }
+    return formatted;
+  };
+
+  const handlePhoneInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatPhoneNumber(e.target.value);
+    setFormData(prev => ({
+      ...prev,
+      phoneNumber: formatted
+    }));
+  };
+
+  const handleCityChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const cityName = e.target.value;
+    setSelectedCity(cityName);
+    setFormData(prev => ({ ...prev, city: cityName }));
+    setSelectedDistrict('');
+    setFormData(prev => ({ ...prev, district: '' }));
+    setDistricts([]);
+    
+    if (cityName) {
+      loadDistricts(cityName);
+    }
+  };
+
+  const handleDistrictChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const districtName = e.target.value;
+    setSelectedDistrict(districtName);
+    setNeighborhoods([]);
+    setFormData(prev => ({ ...prev, district: districtName, neighborhood: '' }));
+    
+    // Mahalleleri yükle
+    if (districtName) {
+      loadNeighborhoods(districtName);
+    }
+  };
+
   const handleSave = async () => {
     try {
       setLoading(true);
+      
+      // Update phone number and email
       await apiService.updateUser({
-        name: formData.name,
-        surname: formData.surname,
+        name: userDetails?.name || '',
+        surname: userDetails?.surname || '',
         email: formData.email,
         phoneNumber: formData.phoneNumber,
-        address: formData.address,
-        tckn: formData.tckn
+        tckn: userDetails?.tckn || ''
       });
+      
+      // Update or create address
+      if (addressDetails) {
+        // Update existing address
+        await apiService.updateAddress(addressDetails.addressId, {
+          country: formData.country,
+          city: formData.city,
+          district: formData.district,
+          neighborhood: formData.neighborhood,
+          addressDetail: formData.addressDetail
+        });
+      } else {
+        // Create new address
+        await apiService.createAddress({
+          country: formData.country,
+          city: formData.city,
+          district: formData.district,
+          neighborhood: formData.neighborhood,
+          addressDetail: formData.addressDetail,
+          userId: user?.id
+        });
+      }
+      
       setEditing(false);
-      // Optionally refresh user data
-      window.location.reload();
+      // Reload user details
+      await loadUserDetails();
     } catch (error) {
       console.error('Profil güncellenirken hata oluştu:', error);
       alert('Profil güncellenirken hata oluştu. Lütfen tekrar deneyin.');
@@ -70,20 +246,27 @@ const Profile = () => {
   };
 
   const handleCancel = () => {
-    if (user) {
+    if (userDetails) {
       setFormData({
-        name: user.name || '',
-        surname: user.surname || '',
-        email: user.email || '',
-        phoneNumber: user.phoneNumber || '',
-        address: user.address || '',
-        tckn: user.tckn || ''
+        name: userDetails.name || '',
+        surname: userDetails.surname || '',
+        email: userDetails.email || '',
+        phoneNumber: userDetails.phoneNumber || '',
+        tckn: userDetails.tckn || '',
+        birthDate: userDetails.birthDate ? new Date(userDetails.birthDate).toISOString().split('T')[0] : '',
+        country: addressDetails?.country || '',
+        city: addressDetails?.city || '',
+        district: addressDetails?.district || '',
+        neighborhood: addressDetails?.neighborhood || '',
+        addressDetail: addressDetails?.addressDetail || ''
       });
+      setSelectedCity(addressDetails?.city || '');
+      setSelectedDistrict(addressDetails?.district || '');
     }
     setEditing(false);
   };
 
-  if (authLoading) {
+  if (authLoading || loading) {
     return (
       <div className="flex-center min-h-screen">
         <div className="text-lg">Yükleniyor...</div>
@@ -142,34 +325,30 @@ const Profile = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Ad
                 </label>
-                {editing ? (
-                  <input
-                    type="text"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                ) : (
-                  <p className="text-gray-900 py-2">{user?.name || 'Belirtilmemiş'}</p>
-                )}
+                <p className="text-gray-900 py-2">{userDetails?.name || 'Belirtilmemiş'}</p>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Soyad
                 </label>
-                {editing ? (
-                  <input
-                    type="text"
-                    name="surname"
-                    value={formData.surname}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                ) : (
-                  <p className="text-gray-900 py-2">{user?.surname || 'Belirtilmemiş'}</p>
-                )}
+                <p className="text-gray-900 py-2">{userDetails?.surname || 'Belirtilmemiş'}</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  TC Kimlik No
+                </label>
+                <p className="text-gray-900 py-2">{userDetails?.tckn || 'Belirtilmemiş'}</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Doğum Tarihi
+                </label>
+                <p className="text-gray-900 py-2">
+                  {userDetails?.birthDate ? new Date(userDetails.birthDate).toLocaleDateString('tr-TR') : 'Belirtilmemiş'}
+                </p>
               </div>
 
               <div>
@@ -185,7 +364,7 @@ const Profile = () => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 ) : (
-                  <p className="text-gray-900 py-2">{user?.email || 'Belirtilmemiş'}</p>
+                  <p className="text-gray-900 py-2">{userDetails?.email || 'Belirtilmemiş'}</p>
                 )}
               </div>
 
@@ -198,46 +377,131 @@ const Profile = () => {
                     type="tel"
                     name="phoneNumber"
                     value={formData.phoneNumber}
-                    onChange={handleInputChange}
+                    onChange={handlePhoneInputChange}
+                    onKeyDown={(e) => {
+                      const allowedKeys = ['Backspace', 'Delete', 'Tab', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
+                      if (!allowedKeys.includes(e.key) && !/^\d$/.test(e.key)) {
+                        e.preventDefault();
+                      }
+                    }}
+                    onFocus={(e) => {
+                      if (!e.target.value) {
+                        setFormData(prev => ({ ...prev, phoneNumber: '0(5' }));
+                      }
+                    }}
+                    onPaste={(e) => {
+                      e.preventDefault();
+                      const pastedText = e.clipboardData.getData('text');
+                      const formatted = formatPhoneNumber(pastedText);
+                      if (formatted.length > 0) {
+                        setFormData(prev => ({ ...prev, phoneNumber: formatted }));
+                      }
+                    }}
+                    placeholder="0(555) 555 55 55"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 ) : (
-                  <p className="text-gray-900 py-2">{user?.phoneNumber || 'Belirtilmemiş'}</p>
+                  <p className="text-gray-900 py-2">{userDetails?.phoneNumber || 'Belirtilmemiş'}</p>
+                )}
+              </div>
+
+              {/* Address Fields */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Ülke
+                </label>
+                {editing ? (
+                  <select
+                    name="country"
+                    value={formData.country}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Ülke Seçiniz</option>
+                    <option value="Türkiye">Türkiye</option>
+                  </select>
+                ) : (
+                  <p className="text-gray-900 py-2">{addressDetails?.country || 'Belirtilmemiş'}</p>
                 )}
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  TC Kimlik No
+                  İl
+                </label>
+                {editing ? (
+                  <select
+                    name="city"
+                    value={selectedCity}
+                    onChange={handleCityChange}
+                    disabled={loadingCities}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                  >
+                    <option value="">{loadingCities ? 'Yükleniyor...' : 'İl Seçiniz'}</option>
+                    {cities.map(city => (
+                      <option key={city.id} value={city.name}>{city.name}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <p className="text-gray-900 py-2">{addressDetails?.city || 'Belirtilmemiş'}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  İlçe
+                </label>
+                {editing ? (
+                  <select
+                    name="district"
+                    value={selectedDistrict}
+                    onChange={handleDistrictChange}
+                    disabled={loadingDistricts || !selectedCity}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                  >
+                    <option value="">{loadingDistricts ? 'Yükleniyor...' : 'İlçe Seçiniz'}</option>
+                    {districts.map(district => (
+                      <option key={district.id} value={district.name}>{district.name}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <p className="text-gray-900 py-2">{addressDetails?.district || 'Belirtilmemiş'}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Mahalle
                 </label>
                 {editing ? (
                   <input
                     type="text"
-                    name="tckn"
-                    value={formData.tckn}
+                    name="neighborhood"
+                    value={formData.neighborhood}
                     onChange={handleInputChange}
-                    maxLength={11}
+                    placeholder="Mahalle adını giriniz"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 ) : (
-                  <p className="text-gray-900 py-2">{user?.tckn || 'Belirtilmemiş'}</p>
+                  <p className="text-gray-900 py-2">{addressDetails?.neighborhood || 'Belirtilmemiş'}</p>
                 )}
               </div>
 
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Adres
+                  Adres Detayı
                 </label>
                 {editing ? (
                   <textarea
-                    name="address"
-                    value={formData.address}
+                    name="addressDetail"
+                    value={formData.addressDetail}
                     onChange={handleInputChange}
                     rows={3}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Cadde, sokak, bina no, daire no vb."
                   />
                 ) : (
-                  <p className="text-gray-900 py-2">{user?.address || 'Belirtilmemiş'}</p>
+                  <p className="text-gray-900 py-2">{addressDetails?.addressDetail || 'Belirtilmemiş'}</p>
                 )}
               </div>
             </div>
@@ -249,18 +513,18 @@ const Profile = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <p className="text-sm text-gray-600">Kullanıcı ID</p>
-                <p className="font-semibold">{user?.id || 'N/A'}</p>
+                <p className="font-semibold">{userDetails?.id || user?.id || 'N/A'}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-600">Rol</p>
                 <p className="font-semibold">
-                  {user?.roleId === 1 ? 'Müşteri' : user?.roleId === 2 ? 'Admin' : 'Bilinmeyen'}
+                  {userDetails?.roleId === 1 ? 'Müşteri' : userDetails?.roleId === 2 ? 'Admin' : user?.roleId === 1 ? 'Müşteri' : user?.roleId === 2 ? 'Admin' : 'Bilinmeyen'}
                 </p>
               </div>
               <div>
                 <p className="text-sm text-gray-600">Kayıt Tarihi</p>
                 <p className="font-semibold">
-                  {user?.dateCreated ? new Date(user.dateCreated).toLocaleDateString('tr-TR') : 'Bilinmiyor'}
+                  {userDetails?.dateCreated ? new Date(userDetails.dateCreated).toLocaleDateString('tr-TR') : 'Bilinmiyor'}
                 </p>
               </div>
               <div>

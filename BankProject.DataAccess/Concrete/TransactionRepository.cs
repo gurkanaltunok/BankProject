@@ -2,6 +2,7 @@
 using BankProject.Entities;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.EntityFrameworkCore;
 
 namespace BankProject.DataAccess.Concrete
 {
@@ -24,6 +25,7 @@ namespace BankProject.DataAccess.Concrete
         public List<Transaction> GetTransactionsByAccountId(int accountId)
         {
             return _context.Transactions
+                           .Include(t => t.ExchangeRate)
                            .Where(t => t.AccountId == accountId || t.TargetAccountId == accountId)
                            .OrderByDescending(t => t.TransactionDate)
                            .ToList();
@@ -39,7 +41,7 @@ namespace BankProject.DataAccess.Concrete
             }
             else if (userId.HasValue)
             {
-                // Eğer accountId verilmemişse ama userId verilmişse, o kullanıcının tüm hesaplarının işlemlerini getir
+                // Eğer accountId verilmemişse ama userId verilmişse o kullanıcının tüm hesaplarının işlemlerini getir
                 var userAccountIds = _context.Accounts
                     .Where(a => a.UserId == userId.Value && a.IsActive)
                     .Select(a => a.AccountId)
@@ -58,7 +60,7 @@ namespace BankProject.DataAccess.Concrete
                 query = query.Where(t => t.TransactionDate <= endDate.Value);
             }
 
-            return query.OrderByDescending(t => t.TransactionDate).ToList();
+            return query.Include(t => t.ExchangeRate).OrderByDescending(t => t.TransactionDate).ToList();
         }
     }
 }

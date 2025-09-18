@@ -265,7 +265,7 @@ export default function BalanceHistoryChart({ balanceHistory, loading }: Balance
     );
   }
 
-  if (balanceHistory.length === 0) {
+  if (!balanceHistory || balanceHistory.length === 0) {
     return (
       <div className="bg-white rounded-lg shadow-sm border p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Bakiye Geçmişi</h3>

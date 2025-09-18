@@ -111,6 +111,22 @@ namespace BankProject.DataAccess.Migrations
                     { 2, "Admin" }
                 });
 
+            // Banka kullanıcısı oluştur (ID: 1, RoleId: 2 = Admin)
+            migrationBuilder.Sql(@"
+                SET IDENTITY_INSERT [Users] ON;
+                INSERT INTO [Users] ([Id], [TCKN], [Name], [Surname], [Email], [PasswordHash], [PasswordSalt], [PhoneNumber], [Address], [RoleId])
+                VALUES (1, '00000000000', 'Bank', 'Admin', 'admin@bank.com', 0x, 0x, '0000000000', 'Banka Merkezi', 2);
+                SET IDENTITY_INSERT [Users] OFF;
+            ");
+
+            // Banka hesabı oluştur (AccountId: 1, TL Vadesiz)
+            migrationBuilder.Sql(@"
+                SET IDENTITY_INSERT [Accounts] ON;
+                INSERT INTO [Accounts] ([AccountId], [CurrencyType], [AccountType], [Balance], [IBAN], [DateCreated], [UserId], [IsActive])
+                VALUES (1, 0, 0, 0, 'TR000000000000000000000001', GETDATE(), 1, 1);
+                SET IDENTITY_INSERT [Accounts] OFF;
+            ");
+
             migrationBuilder.CreateIndex(
                 name: "IX_Accounts_IBAN",
                 table: "Accounts",
@@ -136,6 +152,12 @@ namespace BankProject.DataAccess.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            // Banka hesabını sil
+            migrationBuilder.Sql("DELETE FROM [Accounts] WHERE [AccountId] = 1;");
+            
+            // Banka kullanıcısını sil
+            migrationBuilder.Sql("DELETE FROM [Users] WHERE [Id] = 1;");
+
             migrationBuilder.DropTable(
                 name: "Transactions");
 

@@ -152,23 +152,9 @@ namespace BankProject.DataAccess.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            // Banka hesabını sil
-            migrationBuilder.Sql("DELETE FROM [Accounts] WHERE [AccountId] = 1;");
-            
-            // Banka kullanıcısını sil
-            migrationBuilder.Sql("DELETE FROM [Users] WHERE [Id] = 1;");
-
-            migrationBuilder.DropTable(
-                name: "Transactions");
-
-            migrationBuilder.DropTable(
-                name: "Users");
-
-            migrationBuilder.DropTable(
-                name: "Accounts");
-
-            migrationBuilder.DropTable(
-                name: "Roles");
+            // Bu migration geri alınamaz - tüm veritabanı yapısını oluşturur
+            // Geri alma işlemi için ayrı migration gerekir
+            throw new NotSupportedException("Bu migration geri alınamaz. Tüm veritabanı yapısını oluşturur.");
         }
     }
 }

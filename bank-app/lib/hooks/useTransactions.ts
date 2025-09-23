@@ -27,7 +27,6 @@ export function useTransactions(accountId?: number) {
         data = await apiService.getTransactionsByDateRange();
       }
       
-      console.log('Raw transaction data:', data);
       setTransactions(data);
     } catch (err: any) {
       setError(err.message || 'İşlemler yüklenirken hata oluştu');
@@ -139,11 +138,9 @@ export function useTransactions(accountId?: number) {
 
   const getTransactionsByAccount = useCallback(async (targetAccountId: number) => {
     try {
-      console.log('getTransactionsByAccount called with accountId:', targetAccountId);
       setLoading(true);
       setError(null);
       const data = await apiService.getTransactionsByAccount(targetAccountId);
-      console.log('getTransactionsByAccount response:', data);
       setTransactions(data);
       return data;
     } catch (err: any) {

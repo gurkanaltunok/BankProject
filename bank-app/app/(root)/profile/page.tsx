@@ -20,7 +20,6 @@ const Profile = () => {
     phoneNumber: '',
     tckn: '',
     birthDate: '',
-    // Address fields
     country: '',
     city: '',
     district: '',
@@ -80,21 +79,17 @@ const Profile = () => {
     
     try {
       setLoading(true);
-      // Get full user details
       const userData = await apiService.getCurrentUser();
       setUserDetails(userData);
       
-      // Get address details
       let addressData = null;
       try {
         addressData = await apiService.getAddressByUserId(user.id);
         setAddressDetails(addressData);
       } catch (addressError) {
-        console.log('Address not found, user may not have address yet');
         setAddressDetails(null);
       }
       
-      // Set form data
       setFormData({
         name: userData.name || '',
         surname: userData.surname || '',
@@ -109,10 +104,8 @@ const Profile = () => {
         addressDetail: addressData?.addressDetail || ''
       });
 
-      // Set selected city and district for dropdowns
       if (addressData?.city) {
         setSelectedCity(addressData.city);
-        // Load districts for the selected city
         const city = cities.find(c => c.name === addressData.city);
         if (city) {
           loadDistricts(addressData.city);
@@ -139,17 +132,14 @@ const Profile = () => {
   const formatPhoneNumber = (value: string) => {
     let formatted = value.replace(/\D/g, ''); // Sadece rakamlar
 
-    // Maksimum 11 hane (0 dahil)
     if (formatted.length > 11) {
       formatted = formatted.substring(0, 11);
     }
 
-    // Eğer 0 ile başlamıyorsa 0 ekle
     if (formatted.length > 0 && !formatted.startsWith('0')) {
       formatted = '0' + formatted;
     }
 
-    // Formatla
     if (formatted.length >= 1) {
       if (formatted.length <= 1) {
         formatted = formatted;
@@ -193,7 +183,6 @@ const Profile = () => {
     setNeighborhoods([]);
     setFormData(prev => ({ ...prev, district: districtName, neighborhood: '' }));
     
-    // Mahalleleri yükle
     if (districtName) {
       loadNeighborhoods(districtName);
     }
@@ -203,7 +192,6 @@ const Profile = () => {
     try {
       setLoading(true);
       
-      // Update phone number and email
       await apiService.updateUser({
         name: userDetails?.name || '',
         surname: userDetails?.surname || '',
@@ -212,9 +200,7 @@ const Profile = () => {
         tckn: userDetails?.tckn || ''
       });
       
-      // Update or create address
       if (addressDetails) {
-        // Update existing address
         await apiService.updateAddress(addressDetails.addressId, {
           country: formData.country,
           city: formData.city,
@@ -223,7 +209,6 @@ const Profile = () => {
           addressDetail: formData.addressDetail
         });
       } else {
-        // Create new address
         await apiService.createAddress({
           country: formData.country,
           city: formData.city,
@@ -235,7 +220,6 @@ const Profile = () => {
       }
       
       setEditing(false);
-      // Reload user details
       await loadUserDetails();
     } catch (error) {
       console.error('Profil güncellenirken hata oluştu:', error);

@@ -22,7 +22,8 @@ namespace BankProject.DataAccess.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-
+            // Bu migration geri alınamaz - şifre hash'leri geri alınamaz
+            throw new NotSupportedException("Şifre migration'ı geri alınamaz.");
         }
     }
 }

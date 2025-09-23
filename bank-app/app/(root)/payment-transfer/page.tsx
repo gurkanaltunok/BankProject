@@ -33,13 +33,9 @@ const PaymentTransfer = () => {
   }, [isAuthenticated, router]);
 
   useEffect(() => {
-    console.log('Payment Transfer - accounts:', accounts);
-    console.log('Payment Transfer - accountIdParam:', accountIdParam);
     if (accountIdParam && accounts.length > 0) {
-      console.log('Setting selectedAccountId from param:', parseInt(accountIdParam));
       setSelectedAccountId(parseInt(accountIdParam));
     } else if (accounts.length > 0) {
-      console.log('Setting selectedAccountId from first account:', accounts[0].id);
       setSelectedAccountId(accounts[0].id);
     }
   }, [accountIdParam, accounts]);
@@ -51,9 +47,6 @@ const PaymentTransfer = () => {
     setError('');
     setSuccess('');
 
-    console.log('HandleSubmit - selectedAccountId:', selectedAccountId);
-    console.log('HandleSubmit - accounts:', accounts);
-    console.log('HandleSubmit - selectedAccount:', selectedAccount);
 
     try {
       const amountValue = parseFloat(amount);
@@ -87,21 +80,17 @@ const PaymentTransfer = () => {
         targetAccount = accounts.find(acc => acc.iban === cleanIban);
         
         if (targetAccount) {
-          console.log('Found account in local accounts:', targetAccount);
           targetAccountId = targetAccount.accountId || targetAccount.id;
         } else {
           // Eğer kendi hesaplarında bulunamazsa, API'den tüm hesaplarda ara
           try {
             targetAccount = await apiService.getAccountByIban(cleanIban);
-            console.log('Found account via API:', targetAccount);
             targetAccountId = targetAccount.accountId || targetAccount.id;
           } catch (apiError) {
-            console.log('API error:', apiError);
             throw new Error('Bu IBAN numarasına sahip hesap bulunamadı. Lütfen geçerli bir IBAN girin.');
           }
         }
         
-        console.log('Final targetAccountId:', targetAccountId);
         
         if (targetAccountId === selectedAccountId) {
           throw new Error('Aynı hesaba transfer yapamazsınız');

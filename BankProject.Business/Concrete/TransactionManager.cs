@@ -61,21 +61,13 @@ namespace BankProject.Business.Concrete
             {
                 rate = _exchangeRateService.ConvertCurrency(1.0m, fromCurrency, toCurrency);
 
-                var exchangeRate = new ExchangeRate
-                {
-                    Currency = fromCurrency,
-                    Rate = rate,
-                    Date = DateTime.UtcNow
-                };
+                // Mevcut günlük kur bilgisini al
+                var currentExchangeRate = _exchangeRateRepository.GetLatestExchangeRate();
+                exchangeRateId = currentExchangeRate?.ExchangeRateId ?? 0;
 
-                var savedExchangeRate = _exchangeRateRepository.AddExchangeRate(exchangeRate);
-                exchangeRateId = savedExchangeRate.ExchangeRateId;
-
-                Console.WriteLine($"DEBUG: ExchangeRate saved - {fromCurrency} to {toCurrency}: {rate} (ID: {exchangeRateId})");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Exchange rate API error: {ex.Message}");
                 
                 throw new Exception($"Frankfurter API erişilemiyor. {fromCurrency} -> {toCurrency} dönüşümü yapılamıyor.");
             }
@@ -148,7 +140,6 @@ namespace BankProject.Business.Concrete
                 var (rate, rateId) = GetCurrentExchangeRateAsync(accountCurrency, "TRY").Result;
                 feeInTRY = fee * rate;
                 exchangeRateId = rateId;
-                Console.WriteLine($"DEBUG: Withdraw - {fee} {accountCurrency} fee = {feeInTRY} TL (güncel kur: {rate}, ExchangeRateId: {rateId})");
             }
             
             account.Balance -= totalDebit;
@@ -183,7 +174,6 @@ namespace BankProject.Business.Concrete
             var toAccount = GetActiveAccount(toAccountId);
             var bank = GetBankAccount();
 
-            Console.WriteLine($"DEBUG: FromAccount CurrencyType: {fromAccount.CurrencyType}, ToAccount CurrencyType: {toAccount.CurrencyType}");
             if (fromAccount.CurrencyType != toAccount.CurrencyType)
                 throw new Exception($"Farklı para birimlerinden transfer yapılamaz. Gönderen hesap: {fromAccount.CurrencyType}, Alıcı hesap: {toAccount.CurrencyType}");
 
@@ -201,7 +191,6 @@ namespace BankProject.Business.Concrete
                 var (rate, rateId) = GetCurrentExchangeRateAsync(accountCurrency, "TRY").Result;
                 feeInTRY = fee * rate;
                 exchangeRateId = rateId;
-                Console.WriteLine($"DEBUG: Transfer - {fee} {accountCurrency} fee = {feeInTRY} TL (güncel kur: {rate}, ExchangeRateId: {rateId})");
             }
 
             fromAccount.Balance -= totalDebit;
@@ -287,13 +276,8 @@ namespace BankProject.Business.Concrete
             bankAccount.Balance += commission;
             _accountRepository.UpdateAccount(bankAccount);
 
-            var exchangeRate = new ExchangeRate
-            {
-                Currency = GetCurrencyString(exchangeAccount.CurrencyType),
-                Rate = dto.Rate,
-                Date = DateTime.UtcNow
-            };
-            var savedExchangeRate = _exchangeRateRepository.AddExchangeRate(exchangeRate);
+            // Mevcut günlük kur bilgisini al
+            var currentExchangeRate = _exchangeRateRepository.GetLatestExchangeRate();
 
             var tryTransaction = new Transaction
             {
@@ -304,7 +288,7 @@ namespace BankProject.Business.Concrete
                 TransactionType = (int)TransactionType.ExchangeBuy,
                 Description = $"Döviz Alış - {GetCurrencyString(exchangeAccount.CurrencyType)} ({dto.AmountForeign:F2}) - Komisyon: {commission:F2} TRY",
                 TransactionDate = DateTime.UtcNow,
-                ExchangeRateId = savedExchangeRate.ExchangeRateId,
+                ExchangeRateId = currentExchangeRate?.ExchangeRateId,
                 Fee = commission,
                 FeeInTRY = commission
             };
@@ -319,7 +303,7 @@ namespace BankProject.Business.Concrete
                 TransactionType = (int)TransactionType.ExchangeDeposit,
                 Description = $"Döviz Alış - TRY ({dto.AmountTRY:F2}) - Kur: {dto.Rate:F4}",
                 TransactionDate = DateTime.UtcNow,
-                ExchangeRateId = savedExchangeRate.ExchangeRateId,
+                ExchangeRateId = currentExchangeRate?.ExchangeRateId,
                 Fee = 0,
                 FeeInTRY = 0
             };
@@ -361,13 +345,8 @@ namespace BankProject.Business.Concrete
             bankAccount.Balance += commission;
             _accountRepository.UpdateAccount(bankAccount);
 
-            var exchangeRate = new ExchangeRate
-            {
-                Currency = GetCurrencyString(exchangeAccount.CurrencyType),
-                Rate = dto.Rate,
-                Date = DateTime.UtcNow
-            };
-            var savedExchangeRate = _exchangeRateRepository.AddExchangeRate(exchangeRate);
+            // Mevcut günlük kur bilgisini al
+            var currentExchangeRate = _exchangeRateRepository.GetLatestExchangeRate();
 
             var exchangeTransaction = new Transaction
             {
@@ -378,7 +357,7 @@ namespace BankProject.Business.Concrete
                 TransactionType = (int)TransactionType.ExchangeWithdraw,
                 Description = $"Döviz Satış - TRY ({dto.AmountTRY:F2}) - Kur: {dto.Rate:F4}",
                 TransactionDate = DateTime.UtcNow,
-                ExchangeRateId = savedExchangeRate.ExchangeRateId,
+                ExchangeRateId = currentExchangeRate?.ExchangeRateId,
                 Fee = 0,
                 FeeInTRY = 0
             };
@@ -393,7 +372,7 @@ namespace BankProject.Business.Concrete
                 TransactionType = (int)TransactionType.ExchangeSell,
                 Description = $"Döviz Satış - {GetCurrencyString(exchangeAccount.CurrencyType)} ({dto.AmountForeign:F2}) - Komisyon: {commission:F2} TRY",
                 TransactionDate = DateTime.UtcNow,
-                ExchangeRateId = savedExchangeRate.ExchangeRateId,
+                ExchangeRateId = currentExchangeRate?.ExchangeRateId,
                 Fee = commission,
                 FeeInTRY = commission
             };

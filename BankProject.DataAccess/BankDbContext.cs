@@ -65,11 +65,19 @@ namespace BankProject.DataAccess
 
             // ExchangeRate konfigürasyonu
             modelBuilder.Entity<ExchangeRate>()
-                .Property(e => e.Rate)
+                .Property(e => e.UsdRate)
                 .HasPrecision(18, 6);
 
             modelBuilder.Entity<ExchangeRate>()
-                .HasIndex(e => new { e.Currency, e.Date })
+                .Property(e => e.EurRate)
+                .HasPrecision(18, 6);
+
+            modelBuilder.Entity<ExchangeRate>()
+                .Property(e => e.GbpRate)
+                .HasPrecision(18, 6);
+
+            modelBuilder.Entity<ExchangeRate>()
+                .HasIndex(e => e.Date)
                 .IsUnique();
 
             // Transaction - ExchangeRate ilişkisi

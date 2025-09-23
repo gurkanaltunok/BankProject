@@ -41,30 +41,21 @@ namespace BankProject.API.Controllers
         {
             try
             {
-                Console.WriteLine($"DEBUG: GetDashboardData called at {DateTime.Now}");
                 
-                // Check if user is admin
                 var roleIdClaim = User.FindFirst("RoleId");
                 if (roleIdClaim == null || int.Parse(roleIdClaim.Value) != 2)
                     return Forbid();
 
-                // Get bank account balance (AccountId: 1)
+                // Bank account balance (AccountId: 1)
                 var bankAccount = _accountService.GetAccountById(1);
                 var bankBalance = bankAccount?.Balance ?? 0;
-                Console.WriteLine($"DEBUG: Bank balance: {bankBalance}");
 
-                // Get all users count
                 var allUsers = _userService.GetAllUsers();
                 var totalUsers = allUsers.Count;
-                Console.WriteLine($"DEBUG: Total users: {totalUsers}");
 
-                // Get all accounts and calculate total balance in TRY
                 var allAccounts = _accountService.GetAllAccounts();
-                Console.WriteLine($"DEBUG: Found {allAccounts.Count} accounts");
                 var totalBalance = await CalculateTotalBalanceInTRY(allAccounts);
-                Console.WriteLine($"DEBUG: Final total balance: {totalBalance}");
 
-                // Get recent transactions
                 var recentTransactions = _transactionService.GetTransactionsByDateRange(
                     DateTime.Now.AddDays(-30), 
                     DateTime.Now,
@@ -124,7 +115,6 @@ namespace BankProject.API.Controllers
         {
             try
             {
-                // Check if user is admin
                 var roleIdClaim = User.FindFirst("RoleId");
                 if (roleIdClaim == null || int.Parse(roleIdClaim.Value) != 2)
                     return Forbid();
@@ -143,7 +133,6 @@ namespace BankProject.API.Controllers
         {
             try
             {
-                // Check if user is admin
                 var roleIdClaim = User.FindFirst("RoleId");
                 if (roleIdClaim == null || int.Parse(roleIdClaim.Value) != 2)
                     return Forbid();
@@ -164,7 +153,6 @@ namespace BankProject.API.Controllers
         {
             try
             {
-                // Check if user is admin
                 var roleIdClaim = User.FindFirst("RoleId");
                 if (roleIdClaim == null || int.Parse(roleIdClaim.Value) != 2)
                     return Forbid();
@@ -172,7 +160,6 @@ namespace BankProject.API.Controllers
                 var dailyVolumes = new List<object>();
                 var today = DateTime.Today;
 
-                // Son 7 günün işlem hacmini hesapla
                 for (int i = 6; i >= 0; i--)
                 {
                     var date = today.AddDays(-i);
@@ -185,7 +172,6 @@ namespace BankProject.API.Controllers
                         null // Tüm hesaplar
                     );
 
-                    // Günlük toplam işlem hacmi (sadece para çekme, transfer ve yatırma işlemleri)
                     var dailyVolume = dayTransactions
                         .Where(t => t.TransactionType == 1 || t.TransactionType == 2 || t.TransactionType == 3) // Para çekme, transfer, yatırma
                         .Sum(t => Math.Abs(t.Amount));
@@ -211,7 +197,6 @@ namespace BankProject.API.Controllers
         {
             try
             {
-                // Check if user is admin
                 var roleIdClaim = User.FindFirst("RoleId");
                 if (roleIdClaim == null || int.Parse(roleIdClaim.Value) != 2)
                     return Forbid();
@@ -219,7 +204,6 @@ namespace BankProject.API.Controllers
                 var dailyCommissions = new List<object>();
                 var today = DateTime.Today;
 
-                // Son 7 günün komisyon gelirlerini hesapla
                 for (int i = 6; i >= 0; i--)
                 {
                     var date = today.AddDays(-i);
@@ -232,7 +216,6 @@ namespace BankProject.API.Controllers
                         null // Tüm hesaplar
                     );
 
-                    // Günlük toplam komisyon geliri (sadece para çekme ve transfer işlemlerinden)
                     var dailyCommission = dayTransactions
                         .Where(t => t.TransactionType == 2 || t.TransactionType == 3) // Withdraw (2), Transfer (3)
                         .Sum(t => t.Fee);
@@ -253,75 +236,24 @@ namespace BankProject.API.Controllers
             }
         }
 
-        [HttpGet("test-vakifbank-rates")]
-        public async Task<IActionResult> TestVakifbankRates()
-        {
-            try
-            {
-                // Check if user is admin
-                var roleIdClaim = User.FindFirst("RoleId");
-                if (roleIdClaim == null || int.Parse(roleIdClaim.Value) != 2)
-                    return Forbid();
-
-                // Vakıfbank API'sinden güncel kurları çek
-                var allRates = await _exchangeRateService.GetAllRatesAsync();
-                
-                // Test dönüşümleri
-                var testConversions = new List<object>();
-                var testAmount = 1000m;
-                
-                var currencies = new[] { "USD", "EUR", "GBP" };
-                foreach (var currency in currencies)
-                {
-                    if (allRates.ContainsKey(currency))
-                    {
-                        var convertedAmount = _exchangeRateService.ConvertCurrency(testAmount, "TRY", currency);
-                        testConversions.Add(new
-                        {
-                            from = "TRY",
-                            to = currency,
-                            amount = testAmount,
-                            convertedAmount = convertedAmount,
-                            rate = allRates[currency]
-                        });
-                    }
-                }
-
-                return Ok(new
-                {
-                    message = "Vakıfbank API test başarılı",
-                    timestamp = DateTime.Now,
-                    rates = allRates,
-                    testConversions = testConversions
-                });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { Message = ex.Message, StackTrace = ex.StackTrace });
-            }
-        }
 
         private async Task<decimal> CalculateTotalBalanceInTRY(List<Account> accounts)
         {
             decimal totalBalance = 0;
-            Console.WriteLine($"DEBUG: Calculating total balance for {accounts.Count} accounts at {DateTime.Now}");
 
             foreach (var account in accounts)
             {
                 if (account.CurrencyType == CurrencyType.TRY)
                 {
                     totalBalance += account.Balance;
-                    Console.WriteLine($"DEBUG: TRY account {account.AccountId}: {account.Balance} TRY");
                 }
                 else
                 {
                     var convertedAmount = _exchangeRateService.ConvertCurrency(account.Balance, GetCurrencyString(account.CurrencyType), "TRY");
                     totalBalance += convertedAmount;
-                    Console.WriteLine($"DEBUG: {GetCurrencyString(account.CurrencyType)} account {account.AccountId}: {account.Balance} {GetCurrencyString(account.CurrencyType)} = {convertedAmount} TRY");
                 }
             }
 
-            Console.WriteLine($"DEBUG: Total balance calculated: {totalBalance} TRY");
             return totalBalance;
         }
 
@@ -337,31 +269,37 @@ namespace BankProject.API.Controllers
             };
         }
 
-        [HttpDelete("cleanup-forex-transactions")]
-        public async Task<IActionResult> CleanupForexTransactions()
+        [HttpGet("exchange-service")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetExchangeService()
         {
             try
             {
-                // Forex komisyon transaction'larını sil (type 7)
-                var commissionTransactions = _transactionService.GetTransactionsByDateRange(null, null, null)
-                    .Where(t => t.TransactionType == 7).ToList();
-
-                foreach (var transaction in commissionTransactions)
-                {
-                    // Transaction'ı sil (bu method'u TransactionService'e eklememiz gerekebilir)
-                    Console.WriteLine($"Deleting commission transaction: {transaction.TransactionId}");
-                }
-
-                return Ok(new { 
-                    message = "Forex commission transactions cleaned up successfully",
-                    deletedCount = commissionTransactions.Count
-                });
+                var rates = await _exchangeRateService.GetAllRatesAsync();
+                return Ok(new { rates });
             }
             catch (Exception ex)
             {
                 return BadRequest(new { Message = ex.Message });
             }
         }
+
+        [HttpGet("exchange-rates-with-change")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetExchangeRatesWithChange()
+        {
+            try
+            {
+                var rates = await _exchangeRateService.GetDailyRatesWithChangeAsync();
+                return Ok(new { rates });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+        }
+
+
 
     }
 }

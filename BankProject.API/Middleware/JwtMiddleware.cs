@@ -60,7 +60,6 @@ namespace BankProject.API.Middleware
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"JWT validation failed: {ex.Message}");
             }
         }
     }

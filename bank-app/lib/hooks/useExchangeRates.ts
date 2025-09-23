@@ -16,7 +16,7 @@ export const useExchangeRates = () => {
     
     try {
       // Backend API'mizden güncel döviz kurlarını çek
-      const response = await fetch('http://localhost:5020/api/Test/exchange-service');
+      const response = await fetch('http://localhost:5020/api/Admin/exchange-service');
       
       if (!response.ok) {
         throw new Error(`API Hatası: ${response.status} ${response.statusText}`);

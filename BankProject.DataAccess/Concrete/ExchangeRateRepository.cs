@@ -19,10 +19,9 @@ namespace BankProject.DataAccess.Concrete
             return exchangeRate;
         }
 
-        public ExchangeRate? GetLatestExchangeRate(string currency)
+        public ExchangeRate? GetLatestExchangeRate()
         {
             return _context.ExchangeRates
-                .Where(e => e.Currency == currency)
                 .OrderByDescending(e => e.Date)
                 .FirstOrDefault();
         }
@@ -55,16 +54,25 @@ namespace BankProject.DataAccess.Concrete
 
         public List<ExchangeRate> GetPreviousDayExchangeRates()
         {
-            var yesterday = DateTime.UtcNow.Date.AddDays(-1);
-            return GetExchangeRatesByDate(yesterday);
-        }
-
-        public List<ExchangeRate> GetExchangeRatesByCurrency(string currency)
-        {
+            // Türkiye saati (GMT+3) kullan
+            var turkeyTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Turkey Standard Time"));
+            var yesterday = turkeyTime.Date.AddDays(-1);
+            var today = turkeyTime.Date;
+            
+            // Önce düne ait veriyi ara
+            var yesterdayRates = GetExchangeRatesByDate(yesterday);
+            if (yesterdayRates.Any())
+            {
+                return yesterdayRates;
+            }
+            
+            // Düne ait veri yoksa, bugünden önceki en son veriyi al
             return _context.ExchangeRates
-                .Where(e => e.Currency == currency)
+                .Where(e => e.Date < today)
                 .OrderByDescending(e => e.Date)
+                .Take(1)
                 .ToList();
         }
+
     }
 }

@@ -244,7 +244,6 @@ const AuthForm = ({ type }: AuthFormProps) => {
 
     try {
       if (type === 'sign-in') {
-        console.log('Login form data:', { TCKN: formData.TCKN, Password: formData.Password });
         await login(formData.TCKN, formData.Password);
         router.push('/');
       } else {

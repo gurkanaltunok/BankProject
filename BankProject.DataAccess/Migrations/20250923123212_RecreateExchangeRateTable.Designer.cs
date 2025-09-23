@@ -4,6 +4,7 @@ using BankProject.DataAccess;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BankProject.DataAccess.Migrations
 {
     [DbContext(typeof(BankDbContext))]
-    partial class BankDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250923123212_RecreateExchangeRateTable")]
+    partial class RecreateExchangeRateTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -59,7 +62,7 @@ namespace BankProject.DataAccess.Migrations
                     b.HasIndex("IBAN")
                         .IsUnique();
 
-                    b.ToTable("Accounts", (string)null);
+                    b.ToTable("Accounts");
                 });
 
             modelBuilder.Entity("BankProject.Entities.Address", b =>
@@ -108,7 +111,7 @@ namespace BankProject.DataAccess.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Addresses", (string)null);
+                    b.ToTable("Addresses");
                 });
 
             modelBuilder.Entity("BankProject.Entities.BalanceHistory", b =>
@@ -154,7 +157,7 @@ namespace BankProject.DataAccess.Migrations
 
                     b.HasIndex("TransactionId");
 
-                    b.ToTable("BalanceHistories", (string)null);
+                    b.ToTable("BalanceHistories");
                 });
 
             modelBuilder.Entity("BankProject.Entities.ExchangeRate", b =>
@@ -185,7 +188,7 @@ namespace BankProject.DataAccess.Migrations
                     b.HasIndex("Date")
                         .IsUnique();
 
-                    b.ToTable("ExchangeRates", (string)null);
+                    b.ToTable("ExchangeRates");
                 });
 
             modelBuilder.Entity("BankProject.Entities.Role", b =>
@@ -203,7 +206,7 @@ namespace BankProject.DataAccess.Migrations
 
                     b.HasKey("RoleId");
 
-                    b.ToTable("Roles", (string)null);
+                    b.ToTable("Roles");
 
                     b.HasData(
                         new
@@ -270,7 +273,7 @@ namespace BankProject.DataAccess.Migrations
 
                     b.HasIndex("TargetAccountId");
 
-                    b.ToTable("Transactions", (string)null);
+                    b.ToTable("Transactions");
                 });
 
             modelBuilder.Entity("BankProject.Entities.User", b =>
@@ -331,7 +334,7 @@ namespace BankProject.DataAccess.Migrations
 
                     b.HasIndex("RoleId");
 
-                    b.ToTable("Users", (string)null);
+                    b.ToTable("Users");
                 });
 
             modelBuilder.Entity("BankProject.Entities.Address", b =>

@@ -51,18 +51,14 @@ namespace BankProject.API.Controllers
         [Microsoft.AspNetCore.Authorization.Authorize]
         public IActionResult GetMyAccounts()
         {
-            // JWT tokenden user ID al
             var userIdClaim = User.FindFirst("UserId");
             if (userIdClaim == null)
                 return Unauthorized();
 
             var userId = int.Parse(userIdClaim.Value);
-            Console.WriteLine($"GetMyAccounts called for userId: {userId}");
             var accounts = _accountService.GetAccountsByUserId(userId);
-            Console.WriteLine($"Found {accounts.Count} accounts for user {userId}");
             foreach (var account in accounts)
             {
-                Console.WriteLine($"Account: ID={account.AccountId}, IBAN={account.IBAN}, UserId={account.UserId}");
             }
             return Ok(accounts);
         }
@@ -86,24 +82,20 @@ namespace BankProject.API.Controllers
         private async Task<decimal> CalculateTotalBalanceInTRY(List<Account> accounts)
         {
             decimal totalBalance = 0;
-            Console.WriteLine($"DEBUG: Calculating total balance for {accounts.Count} accounts at {DateTime.Now}");
 
             foreach (var account in accounts)
             {
                 if (account.CurrencyType == CurrencyType.TRY)
                 {
                     totalBalance += account.Balance;
-                    Console.WriteLine($"DEBUG: TRY account {account.AccountId}: {account.Balance} TRY");
                 }
                 else
                 {
                     var convertedAmount = _exchangeRateService.ConvertCurrency(account.Balance, GetCurrencyString(account.CurrencyType), "TRY");
                     totalBalance += convertedAmount;
-                    Console.WriteLine($"DEBUG: {GetCurrencyString(account.CurrencyType)} account {account.AccountId}: {account.Balance} {GetCurrencyString(account.CurrencyType)} = {convertedAmount} TRY");
                 }
             }
 
-            Console.WriteLine($"DEBUG: Total balance calculated: {totalBalance} TRY");
             return totalBalance;
         }
 
@@ -211,10 +203,8 @@ namespace BankProject.API.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Exchange rate API error: {ex.Message}");
             }
 
-            // Fallback rates
             var fallbackRates = new Dictionary<string, decimal>
             {
                 { "TRY", 1.0m },
@@ -233,47 +223,4 @@ namespace BankProject.API.Controllers
     }
 }
 
-//    [Client / Postman / Frontend]
-//                 |
-//                 v
-//       ┌─────────────────────┐
-//       │   AuthController    │   (API Layer)
-//       │  /api/auth/login    │
-//       │  /api/auth/register │
-//       └─────────────────────┘
-//                 |
-//                 v
-//       ┌─────────────────────┐
-//       │    IAuthService     │   (Business Contract)
-//       │ (interface)         │
-//       └─────────────────────┘
-//                 |
-//                 v
-//       ┌─────────────────────┐
-//       │    AuthManager      │   (Business Logic)
-//       │ - Register()        │
-//       │ - Login()           │
-//       │ - GenerateToken()   │
-//       └─────────────────────┘
-//                 |
-//         uses ↓   ↑ returns DTO
-//                 |
-//       ┌─────────────────────┐
-//       │   IUserRepository   │   (DataAccess Contract)
-//       │ (interface)         │
-//       └─────────────────────┘
-//                 |
-//                 v
-//       ┌─────────────────────┐
-//       │   UserRepository    │   (DataAccess Impl)
-//       │ - GetByTCKN()       │
-//       │ - CreateUser()      │
-//       │ - UpdateUser()      │
-//       └─────────────────────┘
-//                 |
-//                 v
-//       ┌─────────────────────┐
-//       │    BankDbContext    │   (EF Core / DB Layer)
-//       │   Users Table       │
-//       └─────────────────────┘
 

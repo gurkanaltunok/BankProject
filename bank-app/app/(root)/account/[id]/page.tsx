@@ -51,15 +51,12 @@ const AccountDetail = () => {
   }, [isAuthenticated, authLoading, router]);
 
   useEffect(() => {
-    console.log('Account detail useEffect - accounts:', accounts, 'accountId:', accountId);
     if (accounts.length > 0 && accountId) {
       const account = accounts.find(acc => acc.id?.toString() === accountId || acc.id === Number(accountId));
-      console.log('Found account:', account);
       if (account) {
         setSelectedAccount(account);
         // Only fetch transactions if we haven't loaded them for this account yet
         if (loadedAccountId.current !== Number(account.id)) {
-          console.log('Fetching transactions for account:', account.id);
           loadedAccountId.current = Number(account.id);
           getTransactionsByAccount(Number(account.id));
         }
@@ -70,11 +67,7 @@ const AccountDetail = () => {
   }, [accounts, accountId, router, getTransactionsByAccount]);
 
   useEffect(() => {
-    console.log('Filter useEffect - transactions:', transactions, 'selectedAccount:', selectedAccount, 'dateFilter:', dateFilter);
     if (transactions.length > 0 && selectedAccount) {
-      console.log('Transaction accountId:', transactions[0]?.accountId, 'type:', typeof transactions[0]?.accountId);
-      console.log('SelectedAccount id:', selectedAccount.id, 'type:', typeof selectedAccount.id);
-      console.log('Number(selectedAccount.id):', Number(selectedAccount.id));
       
       let filtered = transactions.filter(t => {
         const isAccountTransaction = (t.accountId === Number(selectedAccount.id) || t.targetAccountId === Number(selectedAccount.id));
@@ -86,7 +79,6 @@ const AccountDetail = () => {
           return isAccountTransaction && t.transactionType !== 4; // Normal kullanıcı: fee transaction'larını gizle
         }
       });
-      console.log('Filtered by account (excluding fees):', filtered);
 
       const now = new Date();
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -108,10 +100,8 @@ const AccountDetail = () => {
           break;
       }
 
-      console.log('Final filtered transactions:', filtered);
       setFilteredTransactions(filtered);
     } else {
-      console.log('No transactions or selectedAccount, setting empty array');
       setFilteredTransactions([]);
     }
   }, [transactions, selectedAccount, dateFilter, user]);

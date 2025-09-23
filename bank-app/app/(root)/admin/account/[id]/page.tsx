@@ -76,19 +76,14 @@ const AdminAccountDetail = () => {
 
   useEffect(() => {
     if (transactions.length > 0 && selectedAccount) {
-      console.log('Filtering transactions:', transactions);
-      console.log('Selected account:', selectedAccount);
-      console.log('Account ID for filtering:', selectedAccount.accountId);
       
       let filtered = transactions.filter(t => {
         const isAccountTransaction = (t.accountId === Number(selectedAccount.accountId) || t.targetAccountId === Number(selectedAccount.accountId));
-        console.log(`Transaction ${t.id}: accountId=${t.accountId}, targetAccountId=${t.targetAccountId}, isAccountTransaction=${isAccountTransaction}`);
         
         // Admin kullanıcıları fee transaction'larını görebilir
         return isAccountTransaction;
       });
       
-      console.log('Filtered transactions:', filtered);
 
       // Date filtering
       const now = new Date();

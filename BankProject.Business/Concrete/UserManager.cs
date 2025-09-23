@@ -82,7 +82,7 @@ public class UserManager : IUserService
                 new Claim(ClaimTypes.Name, user.TCKN),
                 new Claim(ClaimTypes.Role, user.RoleId.ToString())
             }),
-            Expires = DateTime.UtcNow.AddHours(1),
+            Expires = DateTime.UtcNow.AddMinutes(15),
             Issuer = _config["Jwt:Issuer"],
             Audience = _config["Jwt:Audience"],
             SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)

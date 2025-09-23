@@ -22,13 +22,8 @@ namespace BankProject.DataAccess.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            // Banka kullanıcısının şifresini sıfırla
-            migrationBuilder.Sql(@"
-                UPDATE [Users] 
-                SET [PasswordHash] = 0x,
-                    [PasswordSalt] = 0x
-                WHERE [Id] = 1;
-            ");
+            // Bu migration geri alınamaz - şifre hash'leri geri alınamaz
+            throw new NotSupportedException("Şifre migration'ı geri alınamaz.");
         }
     }
 }

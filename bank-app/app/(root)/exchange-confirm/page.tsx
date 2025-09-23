@@ -131,9 +131,7 @@ export default function ExchangeConfirmPage() {
   };
 
   const calculateCommission = (amount: number) => {
-    console.log('DEBUG: calculateCommission called with amount:', amount);
     const commission = amount * 0.005; // %0.5 komisyon
-    console.log('DEBUG: calculated commission:', commission);
     return commission;
   };
 

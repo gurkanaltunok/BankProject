@@ -145,7 +145,6 @@ class ApiService {
   }
 
   async login(credentials: LoginRequest): Promise<AuthResponse> {
-    console.log('Login request:', credentials);
     
     const response = await fetch(`${API_BASE_URL}/auth/login`, {
       method: 'POST',
@@ -153,12 +152,9 @@ class ApiService {
       body: JSON.stringify(credentials),
     });
 
-    console.log('Response status:', response.status);
-    console.log('Response headers:', response.headers);
 
     const result = await this.handleResponse<any>(response);
     
-    console.log('Response data:', result);
     
     const authResponse: AuthResponse = {
       Token: result.token || result.Token,
@@ -166,15 +162,12 @@ class ApiService {
       RoleId: result.roleId || result.RoleId,
     };
     
-    console.log('Converted auth response:', authResponse);
     
     if (authResponse.Token) {
       localStorage.setItem('authToken', authResponse.Token);
       localStorage.setItem('userId', authResponse.UserId.toString());
       localStorage.setItem('roleId', authResponse.RoleId.toString());
-      console.log('Token stored in localStorage');
     } else {
-      console.log('No token found in response');
     }
     
     return authResponse;
@@ -245,7 +238,6 @@ class ApiService {
   }
 
   async createAccount(accountData: AccountDto): Promise<Account> {
-    console.log('Creating account with data:', accountData);
     
     const requestData = {
       UserId: accountData.UserId,
@@ -263,9 +255,7 @@ class ApiService {
       body: JSON.stringify(requestData),
     });
 
-    console.log('Create account response status:', response.status);
     const data = await this.handleResponse<Account>(response);
-    console.log('Create account response data:', data);
     return data;
   }
 
@@ -286,18 +276,11 @@ class ApiService {
   }
 
   async getMyAccounts(): Promise<Account[]> {
-    console.log('Getting my accounts...');
     const response = await fetch(`${API_BASE_URL}/accounts/my-accounts`, {
       headers: this.getAuthHeaders(),
     });
 
-    console.log('My accounts response status:', response.status);
     const data = await this.handleResponse<any[]>(response);
-    console.log('My accounts data:', data);
-    console.log('First account raw data:', data[0]);
-    console.log('First account AccountId:', data[0]?.AccountId);
-    console.log('First account keys:', Object.keys(data[0] || {}));
-    console.log('First account values:', Object.values(data[0] || {}));
     
     return data.map(account => ({
       id: account.accountId,
@@ -344,14 +327,11 @@ class ApiService {
   }
 
   async getMyTotalBalance(): Promise<number> {
-    console.log('Getting my total balance...');
     const response = await fetch(`${API_BASE_URL}/accounts/my-total-balance`, {
       headers: this.getAuthHeaders(),
     });
 
-    console.log('My total balance response status:', response.status);
     const data = await this.handleResponse<{ totalBalanceInTRY: number }>(response);
-    console.log('My total balance data:', data);
     
     return data.totalBalanceInTRY;
   }
@@ -403,32 +383,24 @@ class ApiService {
   }
 
   async transfer(data: TransferRequest): Promise<Transaction> {
-    console.log('Transfer API call with data:', data);
     const response = await fetch(`${API_BASE_URL}/transactions/transfer`, {
       method: 'POST',
       headers: this.getAuthHeaders(),
       body: JSON.stringify(data),
     });
 
-    console.log('Transfer API response status:', response.status);
     if (!response.ok) {
-      console.log('Transfer API error - response not ok');
     }
 
     return await this.handleResponse<Transaction>(response);
   }
 
   async getTransactionsByAccount(accountId: number): Promise<Transaction[]> {
-    console.log('API getTransactionsByAccount called with accountId:', accountId);
     const response = await fetch(`${API_BASE_URL}/transactions/account/${accountId}`, {
       headers: this.getAuthHeaders(),
     });
 
-    console.log('API getTransactionsByAccount response status:', response.status);
     const data = await this.handleResponse<any[]>(response);
-    console.log('API getTransactionsByAccount raw data:', data);
-    console.log('First transaction keys:', data[0] ? Object.keys(data[0]) : 'No data');
-    console.log('First transaction values:', data[0] ? Object.values(data[0]) : 'No data');
     
     const mappedData = data.map(transaction => ({
       id: transaction.transactionId,
@@ -444,7 +416,6 @@ class ApiService {
       targetAccountId: transaction.targetAccountId,
     }));
     
-    console.log('API getTransactionsByAccount mapped data:', mappedData);
     return mappedData;
   }
 
@@ -458,19 +429,12 @@ class ApiService {
     if (endDate) params.append('endDate', endDate);
     if (accountId) params.append('accountId', accountId.toString());
 
-    console.log('getTransactionsByDateRange API call:', {
-      startDate,
-      endDate,
-      accountId,
-      url: `${API_BASE_URL}/transactions/filter?${params.toString()}`
-    });
 
     const response = await fetch(`${API_BASE_URL}/transactions/filter?${params.toString()}`, {
       headers: this.getAuthHeaders(),
     });
 
     const data = await this.handleResponse<any[]>(response);
-    console.log('getTransactionsByDateRange raw response:', data);
     
     const mappedData = data.map(transaction => ({
       id: transaction.transactionId,
@@ -484,7 +448,6 @@ class ApiService {
       targetAccountId: transaction.targetAccountId,
     }));
     
-    console.log('getTransactionsByDateRange mapped data:', mappedData);
     return mappedData;
   }
 

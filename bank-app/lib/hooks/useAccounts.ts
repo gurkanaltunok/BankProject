@@ -20,9 +20,7 @@ export function useAccounts() {
   const { convertToTRY } = useExchangeRates();
 
   const fetchAccounts = async () => {
-    console.log('fetchAccounts called - isAuthenticated:', isAuthenticated);
     if (!isAuthenticated) {
-      console.log('Not authenticated, returning empty accounts');
       setAccounts([]);
       setLoading(false);
       return;
@@ -31,17 +29,9 @@ export function useAccounts() {
     try {
       setLoading(true);
       setError(null);
-      console.log('Calling apiService.getMyAccounts()');
       const data = await apiService.getMyAccounts();
-      console.log('Raw API data:', data);
-      console.log('First account structure:', data[0]);
-      console.log('First account AccountId:', data[0]?.AccountId);
-      console.log('First account id:', data[0]?.id);
       
       const adaptedAccounts = data.map((account: any, index) => {
-        console.log(`Account ${index}:`, account);
-        console.log(`Account ${index} id:`, account.id);
-        console.log(`Account ${index} accountId:`, account.accountId);
         
         const frontendAccount = {
           ...account,
@@ -78,12 +68,9 @@ export function useAccounts() {
           }
         };
         
-        console.log(`Account ${index} final:`, frontendAccount);
-        console.log(`Account ${index} final id:`, frontendAccount.id);
         return frontendAccount;
       });
       
-      console.log('Adapted accounts:', adaptedAccounts);
       setAccounts(adaptedAccounts);
     } catch (err: any) {
       setError(err.message || 'Hesaplar yüklenirken hata oluştu');

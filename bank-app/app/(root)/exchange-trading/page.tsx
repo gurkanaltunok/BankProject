@@ -41,7 +41,7 @@ export default function ExchangeTradingPage() {
   useEffect(() => {
     const fetchExchangeRates = async () => {
       try {
-        const response = await fetch('http://localhost:5020/api/Test/exchange-service');
+        const response = await fetch('http://localhost:5020/api/Admin/exchange-service');
         if (response.ok) {
           const data = await response.json();
           if (data.rates) {
@@ -108,7 +108,7 @@ export default function ExchangeTradingPage() {
     if (!selectedExchangeAccount || !amount) return;
 
     try {
-      const response = await fetch('http://localhost:5020/api/Test/exchange-service');
+      const response = await fetch('http://localhost:5020/api/Admin/exchange-service');
       const data = await response.json();
       
       if (data.rates) {

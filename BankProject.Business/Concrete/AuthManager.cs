@@ -105,7 +105,7 @@ namespace BankProject.Business.Concrete
                 issuer: _config["Jwt:Issuer"],
                 audience: _config["Jwt:Audience"],
                 claims: claims,
-                expires: DateTime.Now.AddHours(24), // Extended token lifetime for better UX
+                expires: DateTime.Now.AddMinutes(15), // 15 minute token lifetime for maximum security
                 signingCredentials: creds
             );
 

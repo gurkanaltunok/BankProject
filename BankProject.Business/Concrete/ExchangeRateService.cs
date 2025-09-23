@@ -41,7 +41,6 @@ namespace BankProject.Business.Concrete
             if (_cachedRates.ContainsKey(key))
                 return _cachedRates[key];
 
-            // Try to get rate from cached rates
             if (_cachedRates.ContainsKey(fromCurrency) && _cachedRates.ContainsKey(toCurrency))
             {
                 var fromRate = _cachedRates[fromCurrency];
@@ -51,7 +50,6 @@ namespace BankProject.Business.Concrete
                 return rate;
             }
 
-            // Fallback to mock rates if API fails
             return GetMockRate(fromCurrency, toCurrency);
         }
 
@@ -68,41 +66,32 @@ namespace BankProject.Business.Concrete
 
             try
             {
-                // Gerçek zamanlı kurları çek
                 var rates = GetAllRatesAsync().Result;
                 
                 if (rates.ContainsKey(fromCurrency) && rates.ContainsKey(toCurrency))
                 {
-                    // ExchangeRate-API kurları TRY cinsinden olduğu için:
-                    // fromCurrency -> TRY -> toCurrency dönüşümü yapıyoruz
                     decimal rate;
                     
                     if (fromCurrency == "TRY")
                     {
-                        // TRY'den başka para birimine: 1 / kur
                         rate = 1.0m / rates[toCurrency];
                     }
                     else if (toCurrency == "TRY")
                     {
-                        // Başka para biriminden TRY'ye: kur
                         rate = rates[fromCurrency];
                     }
                     else
                     {
-                        // İki yabancı para birimi arasında: fromCurrency -> TRY -> toCurrency
                         rate = rates[fromCurrency] / rates[toCurrency];
                     }
                     
-                    Console.WriteLine($"DEBUG: ConvertCurrency (ExchangeRate-API) - {amount} {fromCurrency} to {toCurrency} = {amount * rate} (rate: {rate})");
                     return amount * rate;
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Exchange rate API error: {ex.Message}");
             }
 
-            // API çalışmadığında hata fırlat
             throw new Exception($"Frankfurter API erişilemiyor. {fromCurrency} -> {toCurrency} dönüşümü yapılamıyor.");
         }
 
@@ -118,7 +107,6 @@ namespace BankProject.Business.Concrete
         {
             try
             {
-                // Frankfurter API'den USD bazlı kurları al
                 var url = $"{_baseUrl}/latest?base=USD&symbols=TRY,EUR,GBP";
                 var response = await _httpClient.GetStringAsync(url);
                 var jsonDoc = JsonDocument.Parse(response);
@@ -127,47 +115,38 @@ namespace BankProject.Business.Concrete
                 {
                     _cachedRates = new Dictionary<string, decimal>();
                     
-                    // USD bazlı kurları al
                     var usdToTry = ratesElement.GetProperty("TRY").GetDecimal();
                     var usdToEur = ratesElement.GetProperty("EUR").GetDecimal();
                     var usdToGbp = ratesElement.GetProperty("GBP").GetDecimal();
                     
-                    // TRY bazlı kurları hesapla
                     _cachedRates["USD"] = usdToTry; // 1 USD = X TRY
                     _cachedRates["EUR"] = usdToTry / usdToEur; // 1 EUR = X TRY
                     _cachedRates["GBP"] = usdToTry / usdToGbp; // 1 GBP = X TRY
                     _cachedRates["TRY"] = 1.0m; // 1 TRY = 1 TRY
                     
                     _lastUpdate = DateTime.UtcNow;
-                    Console.WriteLine($"Frankfurter API'den {_cachedRates.Count} döviz kuru başarıyla alındı.");
-                    Console.WriteLine($"USD: {_cachedRates["USD"]}, EUR: {_cachedRates["EUR"]}, GBP: {_cachedRates["GBP"]}");
                     
-                    // Günlük kurları veritabanına kaydet
                     await SaveDailyRatesToDatabase();
                     
                     return;
                 }
                 
-                Console.WriteLine($"Frankfurter API error: {jsonDoc.RootElement.GetRawText()}");
                 _cachedRates = new Dictionary<string, decimal>(); // Clear rates on API error
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Frankfurter API error: {ex.Message}");
                 _cachedRates = new Dictionary<string, decimal>(); // Clear rates on exception
             }
         }
 
         private void SetMockRates()
         {
-            // Sabit kurları kaldırdık - API çalışmadığında boş döner
             _cachedRates = new Dictionary<string, decimal>();
             _lastUpdate = DateTime.UtcNow;
         }
 
         private decimal GetMockRate(string fromCurrency, string toCurrency)
         {
-            // Sabit kurları kaldırdık - API çalışmadığında 1.0 döner
             return 1.0m;
         }
 
@@ -175,37 +154,32 @@ namespace BankProject.Business.Concrete
         {
             try
             {
-                var today = DateTime.UtcNow.Date;
+                // Türkiye saati (GMT+3) kullan
+                var turkeyTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Turkey Standard Time"));
+                var today = turkeyTime.Date;
                 
-                // Bugün için zaten kayıt var mı kontrol et
                 var todayRates = _exchangeRateRepository.GetExchangeRatesByDate(today);
                 if (todayRates.Any())
                 {
-                    Console.WriteLine("Bugün için döviz kurları zaten kaydedilmiş.");
                     return;
                 }
 
-                // Günlük kurları veritabanına kaydet
-                var currencies = new[] { "USD", "EUR", "GBP" };
-                foreach (var currency in currencies)
+                // Tüm currency'lerin kurlarını tek satırda kaydet
+                if (_cachedRates.ContainsKey("USD") && _cachedRates.ContainsKey("EUR") && _cachedRates.ContainsKey("GBP"))
                 {
-                    if (_cachedRates.ContainsKey(currency))
+                    var exchangeRate = new ExchangeRate
                     {
-                        var exchangeRate = new ExchangeRate
-                        {
-                            Currency = currency,
-                            Rate = _cachedRates[currency],
-                            Date = DateTime.UtcNow
-                        };
-                        
-                        _exchangeRateRepository.AddExchangeRate(exchangeRate);
-                        Console.WriteLine($"Günlük kur kaydedildi: {currency} = {_cachedRates[currency]} TRY");
-                    }
+                        UsdRate = _cachedRates["USD"],
+                        EurRate = _cachedRates["EUR"],
+                        GbpRate = _cachedRates["GBP"],
+                        Date = turkeyTime
+                    };
+                    
+                    _exchangeRateRepository.AddExchangeRate(exchangeRate);
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Günlük kur kaydetme hatası: {ex.Message}");
             }
         }
 
@@ -216,17 +190,18 @@ namespace BankProject.Business.Concrete
                 var previousDayRates = _exchangeRateRepository.GetPreviousDayExchangeRates();
                 var rates = new Dictionary<string, decimal>();
                 
-                foreach (var rate in previousDayRates)
+                if (previousDayRates.Any())
                 {
-                    rates[rate.Currency] = rate.Rate;
+                    var latestRate = previousDayRates.First();
+                    rates["USD"] = latestRate.UsdRate;
+                    rates["EUR"] = latestRate.EurRate;
+                    rates["GBP"] = latestRate.GbpRate;
                 }
                 
-                Console.WriteLine($"Önceki gün kurları alındı: {string.Join(", ", rates.Select(kv => $"{kv.Key}={kv.Value}"))}");
                 return rates;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Önceki gün kurları alma hatası: {ex.Message}");
                 return new Dictionary<string, decimal>();
             }
         }
@@ -235,14 +210,11 @@ namespace BankProject.Business.Concrete
         {
             try
             {
-                // Güncel kurları al
                 await EnsureRatesAreFreshAsync();
                 var currentRates = new Dictionary<string, decimal>(_cachedRates);
                 
-                // Önceki gün kurlarını al
                 var previousRates = await GetPreviousDayRatesAsync();
                 
-                // Yüzdelik değişimi hesapla ve ekle
                 var ratesWithChange = new Dictionary<string, decimal>();
                 var currencies = new[] { "USD", "EUR", "GBP" };
                 
@@ -252,12 +224,10 @@ namespace BankProject.Business.Concrete
                     {
                         ratesWithChange[currency] = currentRates[currency];
                         
-                        // Yüzdelik değişimi hesapla
                         if (previousRates.ContainsKey(currency) && previousRates[currency] > 0)
                         {
                             var change = ((currentRates[currency] - previousRates[currency]) / previousRates[currency]) * 100;
                             ratesWithChange[$"{currency}_CHANGE"] = change;
-                            Console.WriteLine($"{currency} değişimi: {change:F2}% (Önceki: {previousRates[currency]}, Güncel: {currentRates[currency]})");
                         }
                         else
                         {
@@ -270,7 +240,6 @@ namespace BankProject.Business.Concrete
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Günlük kurlar ve değişim alma hatası: {ex.Message}");
                 return new Dictionary<string, decimal>();
             }
         }

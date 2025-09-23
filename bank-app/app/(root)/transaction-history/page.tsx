@@ -20,113 +20,144 @@ const TransactionHistory = () => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [error, setError] = useState('');
-  const [quickFilter, setQuickFilter] = useState('');
+  const [quickFilter, setQuickFilter] = useState('all'); // Default olarak 'all' seçili
+  const [filteredTransactions, setFilteredTransactions] = useState<any[]>([]);
 
-  // Authentication check
   useEffect(() => {
     if (!isAuthenticated) {
       router.push('/sign-in');
     }
   }, [isAuthenticated, router]);
 
-  // Initialize from URL params
   useEffect(() => {
     if (accountIdParam) {
       setSelectedAccountId(parseInt(accountIdParam));
     }
   }, [accountIdParam]);
 
-  // Set default date range to today
   useEffect(() => {
-    const today = new Date().toISOString().split('T')[0];
-    setStartDate(today);
-    setEndDate(today);
+    // Default olarak tüm tarihleri kapsayacak şekilde ayarla
+    setStartDate('');
+    setEndDate('');
   }, []);
 
-  // Set default account selection (only on first load)
   useEffect(() => {
-    if (accounts.length > 0 && selectedAccountId === undefined && !accountIdParam) {
-      setSelectedAccountId(accounts[0].id);
+    // Default olarak tüm hesapları göster (undefined = tüm hesaplar)
+    if (accounts.length > 0 && !accountIdParam) {
+      setSelectedAccountId(undefined);
     }
   }, [accounts, accountIdParam]);
 
-  // Load transactions function
   const loadTransactions = async (accountId?: number, useDateFilter: boolean = false) => {
     try {
       setError('');
       const finalAccountId = accountId !== undefined ? accountId : selectedAccountId;
-      console.log('loadTransactions called with:', { accountId, selectedAccountId, finalAccountId, useDateFilter, startDate, endDate });
-      console.log('finalAccountId type:', typeof finalAccountId, 'value:', finalAccountId);
       
       let result;
       if (finalAccountId !== undefined && finalAccountId !== null) {
-        // Belirli bir account seçiliyse getTransactionsByAccount kullan
-        console.log('Using getTransactionsByAccount for account:', finalAccountId);
+        // Belirli bir hesap seçiliyse, o hesabın işlemlerini al
         result = await getTransactionsByAccount(finalAccountId);
       } else {
-        // Tüm hesaplar için getTransactionsByDateRange kullan
-        console.log('Using getTransactionsByDateRange for all accounts');
-        result = await getTransactionsByDateRange(
-          useDateFilter ? startDate : undefined, // startDate
-          useDateFilter ? endDate : undefined,   // endDate
-          undefined  // accountId
-        );
+        // Tüm hesaplar seçiliyse, tüm işlemleri al (tarih filtresi olmadan)
+        result = await getTransactionsByDateRange();
       }
-      console.log('loadTransactions result:', result);
     } catch (err: any) {
       console.error('loadTransactions error:', err);
       setError(err.message);
     }
   };
 
-  // Load transactions when accounts are loaded
   useEffect(() => {
-    if (accounts.length > 0 && selectedAccountId !== undefined) {
-      console.log('useEffect çalıştı, selectedAccountId:', selectedAccountId);
+    if (accounts.length > 0) {
       loadTransactions();
     }
   }, [accounts.length, selectedAccountId]);
 
+  // Client-side filtering effect - çalışan sayfadaki gibi
+  useEffect(() => {
+    if (transactions.length > 0) {
+      let filtered = transactions.filter(t => {
+        // Hesap filtresi
+        const isAccountMatch = selectedAccountId === undefined || 
+          t.accountId === selectedAccountId || 
+          t.targetAccountId === selectedAccountId;
+        
+        // Admin kullanıcıları fee transaction'larını görebilir, normal kullanıcılar göremez
+        const isVisibleToUser = user?.roleId === 2 ? true : t.transactionType !== 4;
+        
+        return isAccountMatch && isVisibleToUser;
+      });
 
-  // Handle form submission
+      // Tarih filtresi
+      if (startDate && endDate) {
+        // GMT+3 (Türkiye saati) için tarih karşılaştırması
+        filtered = filtered.filter(t => {
+          const transactionDate = new Date(t.transactionDate);
+          // GMT+3 timezone'a çevir
+          const transactionDateGMT3 = new Date(transactionDate.getTime() + (3 * 60 * 60 * 1000));
+          const transactionDateStr = transactionDateGMT3.toISOString().split('T')[0]; // YYYY-MM-DD formatına çevir
+          return transactionDateStr >= startDate && transactionDateStr <= endDate;
+        });
+      }
+
+      setFilteredTransactions(filtered);
+    } else {
+      setFilteredTransactions([]);
+    }
+  }, [transactions, selectedAccountId, startDate, endDate, user]);
+
+
   const handleFilter = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('handleFilter called with selectedAccountId:', selectedAccountId, 'startDate:', startDate, 'endDate:', endDate);
-    // Form submission'da tarih filtreleme kullan
-    await loadTransactions(selectedAccountId, true);
+    // Client-side filtering kullanıyoruz, sadece verileri yeniden yükle
+    await loadTransactions(selectedAccountId, false);
   };
 
-  // Handle quick filters
   const handleQuickFilter = async (filter: string) => {
     setQuickFilter(filter);
-    const today = new Date();
+    // GMT+3 (Türkiye saati) için bugünü hesapla
+    const now = new Date();
+    const todayGMT3 = new Date(now.getTime() + (3 * 60 * 60 * 1000));
     let start = new Date();
     let end = new Date();
 
     switch (filter) {
       case 'today':
-        start.setHours(0, 0, 0, 0);
-        end.setHours(23, 59, 59, 999);
-        break;
+        // Bugün için GMT+3'te bugünün tarihini kullan
+        const todayStr = todayGMT3.toISOString().split('T')[0];
+        setStartDate(todayStr);
+        setEndDate(todayStr);
+        return;
       case '7days':
-        start.setDate(today.getDate() - 7);
+        start = new Date(todayGMT3);
+        start.setDate(todayGMT3.getDate() - 7);
+        end = new Date(todayGMT3);
         break;
       case '1month':
-        start.setMonth(today.getMonth() - 1);
+        start = new Date(todayGMT3);
+        start.setMonth(todayGMT3.getMonth() - 1);
+        end = new Date(todayGMT3);
         break;
       case '3months':
-        start.setMonth(today.getMonth() - 3);
+        start = new Date(todayGMT3);
+        start.setMonth(todayGMT3.getMonth() - 3);
+        end = new Date(todayGMT3);
         break;
       case '6months':
-        start.setMonth(today.getMonth() - 6);
+        start = new Date(todayGMT3);
+        start.setMonth(todayGMT3.getMonth() - 6);
+        end = new Date(todayGMT3);
         break;
       case '1year':
-        start.setFullYear(today.getFullYear() - 1);
+        start = new Date(todayGMT3);
+        start.setFullYear(todayGMT3.getFullYear() - 1);
+        end = new Date(todayGMT3);
         break;
       case 'all':
-        start = new Date(0);
-        end = new Date();
-        break;
+        // Tümü seçildiğinde tarih filtrelerini temizle
+        setStartDate('');
+        setEndDate('');
+        return; // Erken çık
     }
 
     const newStartDate = start.toISOString().split('T')[0];
@@ -135,19 +166,14 @@ const TransactionHistory = () => {
     setStartDate(newStartDate);
     setEndDate(newEndDate);
     
-    // Tarih değiştikten sonra transaction'ları yeniden yükle
-    console.log('Quick filter applied, reloading transactions...');
-    // Quick filter'lar tarih değiştiriyor, tarih filtreleme kullan
-    await loadTransactions(selectedAccountId, true);
+    // Client-side filtering kullanıyoruz, sadece tarihleri güncelle
   };
 
 
-  // Get transaction type display info
   const getTransactionInfo = (transaction: any, currentAccountId: number) => {
     const isFee = transaction.transactionType === 4 || transaction.description?.includes('İşlem Ücreti') || false;
     const isExchangeCommission = transaction.transactionType === 7;
     
-    // İşlem ücreti ise diğer kontrolleri yapma
     if (isFee) {
       return {
         type: 'İşlem Ücreti',
@@ -156,7 +182,6 @@ const TransactionHistory = () => {
       };
     }
     
-    // Döviz komisyonu
     if (isExchangeCommission) {
       return {
         type: 'Döviz Komisyonu',
@@ -173,24 +198,19 @@ const TransactionHistory = () => {
     const isExchangeDeposit = transaction.transactionType === 8;
     const isExchangeWithdraw = transaction.transactionType === 9;
     
-    // Transfer işlemleri için doğru kategorilendirme
     let isTransferIn = false;
     let isTransferOut = false;
     
     if (isTransfer) {
-      // Eğer bu hesap transferin kaynak hesabı ise (para çıkıyor)
       if (transaction.accountId === currentAccountId) {
         isTransferOut = true;
       }
-      // Eğer bu hesap transferin hedef hesabı ise (para giriyor)
       else if (transaction.targetAccountId === currentAccountId) {
         isTransferIn = true;
       }
     }
 
-    // Döviz işlemleri için logic
     if (isExchangeBuy) {
-      // Döviz alış: TRY hesabından çıkış (kırmızı)
       return {
         type: 'Döviz Alış',
         color: 'text-red-600',
@@ -199,7 +219,6 @@ const TransactionHistory = () => {
     }
     
     if (isExchangeSell) {
-      // Döviz satış: TRY hesabına giriş (yeşil)
       return {
         type: 'Döviz Satış',
         color: 'text-green-600',
@@ -208,7 +227,6 @@ const TransactionHistory = () => {
     }
     
     if (isExchangeDeposit) {
-      // Döviz hesabına para girişi (yeşil)
       return {
         type: 'Döviz Girişi',
         color: 'text-green-600',
@@ -217,7 +235,6 @@ const TransactionHistory = () => {
     }
     
     if (isExchangeWithdraw) {
-      // Döviz hesabından para çıkışı (kırmızı)
       return {
         type: 'Döviz Çıkışı',
         color: 'text-red-600',
@@ -241,9 +258,9 @@ const TransactionHistory = () => {
   }
 
   return (
-    <section className="flex w-full flex-row max-xl:max-h-screen max-xl:overflow-y-scroll">
-      <div className="flex w-full flex-1 flex-col gap-8 px-5 sm:px-8 py-7 lg:py-12 xl:max-h-screen xl:overflow-y-scroll">
-        <header>
+    <section className="home">
+      <div className="home-content">
+        <header className="home-header">
           <HeaderBox 
             title="İşlem Geçmişi"
             subtext="Hesap işlemlerinizi görüntüleyin ve filtreleyin"
@@ -261,7 +278,7 @@ const TransactionHistory = () => {
             </Button>
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="mt-8 space-y-6">
             {/* Quick Filters */}
             <div className="bg-white p-6 rounded-lg border">
               <h3 className="text-18 font-semibold mb-4">Hızlı Filtreler</h3>
@@ -301,9 +318,7 @@ const TransactionHistory = () => {
                     onChange={(e) => {
                       const value = e.target.value;
                       const accountId = value && value !== '' ? parseInt(value) : undefined;
-                      console.log('Dropdown onChange:', { value, accountId, selectedAccountId });
                       setSelectedAccountId(accountId);
-                      console.log('setSelectedAccountId called with:', accountId);
                     }}
                     className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-bankGradient"
                   >
@@ -361,7 +376,7 @@ const TransactionHistory = () => {
             <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
               <div className="px-6 py-4 border-b">
                 <h3 className="text-18 font-semibold">
-                  İşlemler ({user?.roleId === 2 ? transactions.length : transactions.filter(t => t.transactionType !== 4).length})
+                  İşlemler ({filteredTransactions.length})
                 </h3>
               </div>
 
@@ -369,7 +384,7 @@ const TransactionHistory = () => {
                 <div className="text-center py-8 text-gray-600">
                   İşlemler yükleniyor...
                 </div>
-              ) : transactions.length === 0 ? (
+              ) : filteredTransactions.length === 0 ? (
                 <div className="text-center py-8 text-gray-600">
                   Seçilen kriterlere uygun işlem bulunamadı.
                 </div>
@@ -402,16 +417,7 @@ const TransactionHistory = () => {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {transactions
-                        .filter(transaction => {
-                          // Admin kullanıcıları fee transaction'larını görebilir, normal kullanıcılar göremez
-                          if (user?.roleId === 2) {
-                            return true; // Admin: tüm transaction'ları göster
-                          } else {
-                            return transaction.transactionType !== 4; // Normal kullanıcı: fee transaction'larını gizle
-                          }
-                        })
-                        .map((transaction, index) => {
+                      {filteredTransactions.map((transaction, index) => {
                         const account = accounts.find(acc => acc.id === transaction.accountId);
                         const transactionInfo = getTransactionInfo(transaction, transaction.accountId);
                         
@@ -421,13 +427,19 @@ const TransactionHistory = () => {
                               {account ? account.iban : `Hesap ${transaction.accountId}`}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {new Date(transaction.transactionDate).toLocaleDateString('tr-TR', {
-                                day: '2-digit',
-                                month: '2-digit',
-                                year: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              })}
+                              {(() => {
+                                const date = new Date(transaction.transactionDate);
+                                // GMT+3 timezone'a çevir
+                                const dateGMT3 = new Date(date.getTime() + (3 * 60 * 60 * 1000));
+                                return dateGMT3.toLocaleDateString('tr-TR', {
+                                  day: '2-digit',
+                                  month: '2-digit',
+                                  year: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                  timeZone: 'Europe/Istanbul'
+                                });
+                              })()}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                               {transaction.description || 'Açıklama yok'}
@@ -504,67 +516,67 @@ const TransactionHistory = () => {
             </div>
 
             {/* Summary */}
-            {(user?.roleId === 2 ? transactions.length : transactions.filter(t => t.transactionType !== 4).length) > 0 && (
+            {filteredTransactions.length > 0 && (
               <div className="bg-blue-50 p-4 rounded-lg">
                 <h4 className="font-semibold text-blue-900 mb-2">Özet</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
                   <div>
                     <span className="text-blue-700">Toplam İşlem: </span>
-                    <span className="font-semibold">{user?.roleId === 2 ? transactions.length : transactions.filter(t => t.transactionType !== 4).length}</span>
+                    <span className="font-semibold">{filteredTransactions.length}</span>
                   </div>
                   <div>
                     <span className="text-green-700 font-semibold">Para Yatırma: </span>
                     <span className="font-bold text-green-800">
-                      {transactions.filter(t => t.transactionType === 1).length}
+                      {filteredTransactions.filter(t => t.transactionType === 1).length}
                     </span>
                   </div>
                   <div>
                     <span className="text-red-700 font-semibold">Para Çekme: </span>
                     <span className="font-bold text-red-800">
-                      {transactions.filter(t => t.transactionType === 2).length}
+                      {filteredTransactions.filter(t => t.transactionType === 2).length}
                     </span>
                   </div>
                   <div>
                     <span className="text-green-700 font-semibold">Transfer (Gelen): </span>
                     <span className="font-bold text-green-800">
-                      {transactions.filter(t => t.transactionType === 3 && t.targetAccountId && t.targetAccountId !== t.accountId).length}
+                      {filteredTransactions.filter(t => t.transactionType === 3 && t.targetAccountId && t.targetAccountId !== t.accountId).length}
                     </span>
                   </div>
                   <div>
                     <span className="text-red-700 font-semibold">Transfer (Giden): </span>
                     <span className="font-bold text-red-800">
-                      {transactions.filter(t => t.transactionType === 3 && t.targetAccountId && t.targetAccountId !== t.accountId).length}
+                      {filteredTransactions.filter(t => t.transactionType === 3 && t.targetAccountId && t.targetAccountId !== t.accountId).length}
                     </span>
                   </div>
                   <div>
                     <span className="text-blue-700 font-semibold">Döviz Alış: </span>
                     <span className="font-bold text-blue-800">
-                      {transactions.filter(t => t.transactionType === 5).length}
+                      {filteredTransactions.filter(t => t.transactionType === 5).length}
                     </span>
                   </div>
                   <div>
                     <span className="text-purple-700 font-semibold">Döviz Satış: </span>
                     <span className="font-bold text-purple-800">
-                      {transactions.filter(t => t.transactionType === 6).length}
+                      {filteredTransactions.filter(t => t.transactionType === 6).length}
                     </span>
                   </div>
                   <div>
                     <span className="text-green-700 font-semibold">Döviz Girişi: </span>
                     <span className="font-bold text-green-800">
-                      {transactions.filter(t => t.transactionType === 8).length}
+                      {filteredTransactions.filter(t => t.transactionType === 8).length}
                     </span>
                   </div>
                   <div>
                     <span className="text-red-700 font-semibold">Döviz Çıkışı: </span>
                     <span className="font-bold text-red-800">
-                      {transactions.filter(t => t.transactionType === 9).length}
+                      {filteredTransactions.filter(t => t.transactionType === 9).length}
                     </span>
                   </div>
                   {user?.roleId === 2 && (
                     <div>
                       <span className="text-orange-700 font-semibold">İşlem Ücreti: </span>
                       <span className="font-bold text-orange-800">
-                        {transactions.filter(t => t.transactionType === 4).length}
+                        {filteredTransactions.filter(t => t.transactionType === 4).length}
                       </span>
                     </div>
                   )}

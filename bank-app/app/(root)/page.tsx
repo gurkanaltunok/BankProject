@@ -20,33 +20,25 @@ const Home = () => {
   const [totalBalanceInTRY, setTotalBalanceInTRY] = useState(0);
   const [isUpdatingBalance, setIsUpdatingBalance] = useState(false);
   
-  // Admin dashboard states
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [dailyTransactionVolume, setDailyTransactionVolume] = useState<any[]>([]);
   const [dailyCommissionRevenue, setDailyCommissionRevenue] = useState<any[]>([]);
 
   useEffect(() => {
-    // Geçici olarak authentication kontrolünü devre dışı bırak
-    // if (!authLoading && !isAuthenticated) {
-    //   router.push('/sign-in');
-    // }
   }, [isAuthenticated, authLoading, router]);
 
-  // Admin dashboard data loading
   useEffect(() => {
     if (user?.roleId === 2) {
       loadAdminDashboardData();
     }
   }, [user]);
 
-  // Load total balance for regular users
   useEffect(() => {
     if (user?.roleId === 1 && isAuthenticated) {
       loadTotalBalance();
     }
   }, [user, isAuthenticated]);
 
-  // Kurlar güncellendiğinde toplam bakiyeyi de güncelle
   useEffect(() => {
     if (user?.roleId === 1 && isAuthenticated && rates.length > 0) {
       loadTotalBalance();
@@ -67,25 +59,19 @@ const Home = () => {
 
   const loadAdminDashboardData = async () => {
     try {
-      console.log('Admin dashboard data yükleniyor...');
       const data = await apiService.getAdminDashboard();
-      console.log('Dashboard data:', data);
       setDashboardData(data);
       
-      // Volume data'yı ayrı olarak yükle (hata olursa dashboard yine çalışsın)
       try {
         const volumeData = await apiService.getDailyTransactionVolume();
-        console.log('Volume data:', volumeData);
         setDailyTransactionVolume(volumeData);
       } catch (volumeError) {
         console.error('Volume data yüklenirken hata:', volumeError);
         setDailyTransactionVolume([]);
       }
 
-      // Commission revenue data'yı ayrı olarak yükle
       try {
         const commissionData = await apiService.getDailyCommissionRevenue();
-        console.log('Commission data:', commissionData);
         setDailyCommissionRevenue(commissionData);
       } catch (commissionError) {
         console.error('Commission data yüklenirken hata:', commissionError);
@@ -93,7 +79,6 @@ const Home = () => {
       }
     } catch (error) {
       console.error('Admin dashboard data yüklenirken hata:', error);
-      // Hata durumunda da dashboard'u göster
       setDashboardData({ 
         bankBalance: 0, 
         totalUsers: 0, 
@@ -110,12 +95,10 @@ const Home = () => {
   useEffect(() => {
     if (accounts.length === 0 || rates.length === 0) return;
 
-    // Tüm hesapları TRY'ye çevir
     const totalBalanceTRY = accounts.reduce((sum, account) => {
       const balance = account.balance || account.currentBalance || 0;
       const currencyType = account.currencyType || 0;
       
-      // Manuel döviz kuru hesaplaması (convertToTRY fonksiyonunu kullanmadan)
       let convertedBalance = balance;
       if (currencyType === 1) { // USD
         const usdRate = rates.find(r => r.currency === 'USD')?.rate || 34.50;
@@ -124,12 +107,10 @@ const Home = () => {
         const eurRate = rates.find(r => r.currency === 'EUR')?.rate || 37.20;
         convertedBalance = balance * eurRate;
       }
-      // currencyType === 0 ise TRY, değişiklik yok
       
       return sum + convertedBalance;
     }, 0);
 
-    // Seçilen para birimine çevir
     let finalBalance = totalBalanceTRY;
     if (displayCurrency === 'USD') {
       const usdRate = rates.find(r => r.currency === 'USD')?.rate || 34.50;
@@ -174,7 +155,6 @@ const Home = () => {
     return null;
   }
 
-  // Admin kullanıcıları için admin dashboard
   if (user?.roleId === 2) {
     if (!dashboardData) {
       return (
@@ -287,7 +267,6 @@ const Home = () => {
     );
   }
 
-  // Normal kullanıcılar için normal ana sayfa
   return (
     <div className="w-full">
       <div className="bg-white shadow-sm border-b">

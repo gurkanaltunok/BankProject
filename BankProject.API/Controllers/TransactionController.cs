@@ -109,17 +109,14 @@ namespace BankProject.API.Controllers
         [HttpGet("filter")]
         public IActionResult GetTransactionsByDateRange([FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate, [FromQuery] int? accountId = null)
         {
-            Console.WriteLine($"GetTransactionsByDateRange called with accountId: {accountId}, UserId: {UserId}");
             
             if (accountId.HasValue)
             {
-                Console.WriteLine($"Checking authorization for accountId: {accountId.Value}");
                 var authResult = AuthorizeAccount(accountId.Value);
                 if (authResult != null) return authResult;
             }
             else
             {
-                Console.WriteLine("No accountId provided, getting all user transactions");
             }
 
             var transactions = _transactionService.GetTransactionsByDateRange(startDate, endDate, accountId, UserId);

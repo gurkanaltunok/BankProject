@@ -11,10 +11,8 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
 builder.Services.AddControllers();
 
-// CORS configuration for frontend
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowReactApp", policy =>
@@ -26,14 +24,12 @@ builder.Services.AddCors(options =>
     });
 });
 
-// DbContext dependency injection
 builder.Services.AddDbContext<BankDbContext>(options =>
     options.UseSqlServer(
         builder.Configuration.GetConnectionString("DefaultConnection"),
         b => b.MigrationsAssembly("BankProject.DataAccess")
     ));
 
-// Dependency injections
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IUserService, UserManager>();
 
@@ -48,18 +44,14 @@ builder.Services.AddScoped<IBalanceHistoryRepository, BalanceHistoryRepository>(
 
 builder.Services.AddScoped<IAuthService, AuthManager>();
 
-// Address services
 builder.Services.AddScoped<IAddressRepository, AddressRepository>();
 builder.Services.AddScoped<IAddressService, AddressService>();
 
-// Exchange rate service
 builder.Services.AddScoped<IExchangeRateService, ExchangeRateService>();
 builder.Services.AddScoped<IExchangeRateRepository, ExchangeRateRepository>();
 
-// HttpClient for external APIs
 builder.Services.AddHttpClient();
 
-// Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -94,7 +86,6 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// JWT Authentication
 var jwtKey = builder.Configuration["Jwt:Key"];
 if (string.IsNullOrEmpty(jwtKey))
 {
@@ -120,12 +111,10 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         {
             OnAuthenticationFailed = context =>
             {
-                Console.WriteLine($"JWT Authentication failed: {context.Exception.Message}");
                 return Task.CompletedTask;
             },
             OnTokenValidated = context =>
             {
-                Console.WriteLine("JWT Token validated successfully");
                 return Task.CompletedTask;
             }
         };
@@ -133,7 +122,6 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -142,10 +130,8 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-// Enable CORS
 app.UseCors("AllowReactApp");
 
-// Add JWT middleware
 app.UseMiddleware<JwtMiddleware>();
 
 app.UseAuthentication();

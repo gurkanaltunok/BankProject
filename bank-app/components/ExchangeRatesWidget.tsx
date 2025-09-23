@@ -24,7 +24,7 @@ const ExchangeRatesWidget = () => {
       setError(null);
       
       // Backend API'mizden döviz kurlarını ve günlük değişimi çek
-      const response = await fetch('http://localhost:5020/api/Test/exchange-rates-with-change');
+      const response = await fetch('http://localhost:5020/api/Admin/exchange-rates-with-change');
       
       if (!response.ok) {
         throw new Error(`API Hatası: ${response.status} ${response.statusText}`);

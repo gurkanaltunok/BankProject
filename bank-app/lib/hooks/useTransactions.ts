@@ -112,6 +112,12 @@ export function useTransactions(accountId?: number) {
       case 1: return 'Para Yatırma'; // Deposit = 1
       case 2: return 'Para Çekme';   // Withdraw = 2
       case 3: return 'Transfer';     // Transfer = 3
+      case 4: return 'İşlem Ücreti'; // Fee = 4
+      case 5: return 'Döviz Alış';   // ExchangeBuy = 5
+      case 6: return 'Döviz Satış';  // ExchangeSell = 6
+      case 7: return 'Döviz Komisyonu'; // ExchangeCommission = 7
+      case 8: return 'Döviz Girişi'; // ExchangeDeposit = 8
+      case 9: return 'Döviz Çıkışı'; // ExchangeWithdraw = 9
       default: return 'Bilinmeyen';
     }
   };
@@ -121,6 +127,12 @@ export function useTransactions(accountId?: number) {
       case 1: return 'text-green-600 font-semibold'; // Deposit = 1 - Yeşil
       case 2: return 'text-red-600 font-semibold';   // Withdraw = 2 - Kırmızı
       case 3: return 'text-red-600 font-semibold';   // Transfer = 3 - Kırmızı (bakiye azalır)
+      case 4: return 'text-orange-600 font-semibold'; // Fee = 4 - Turuncu
+      case 5: return 'text-red-600 font-semibold';   // ExchangeBuy = 5 - Kırmızı
+      case 6: return 'text-green-600 font-semibold'; // ExchangeSell = 6 - Yeşil
+      case 7: return 'text-purple-600 font-semibold'; // ExchangeCommission = 7 - Mor
+      case 8: return 'text-green-600 font-semibold'; // ExchangeDeposit = 8 - Yeşil
+      case 9: return 'text-red-600 font-semibold';   // ExchangeWithdraw = 9 - Kırmızı
       default: return 'text-gray-600';
     }
   };

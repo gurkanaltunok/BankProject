@@ -46,6 +46,13 @@ const Home = () => {
     }
   }, [user, isAuthenticated]);
 
+  // Kurlar güncellendiğinde toplam bakiyeyi de güncelle
+  useEffect(() => {
+    if (user?.roleId === 1 && isAuthenticated && rates.length > 0) {
+      loadTotalBalance();
+    }
+  }, [rates, user, isAuthenticated]);
+
   const loadTotalBalance = async () => {
     try {
       setIsUpdatingBalance(true);

@@ -1,5 +1,3 @@
-// Backend enum'larından frontend'e aktarılan TypeScript enum'ları
-
 export enum AccountType {
   Vadesiz = 0,
   Vadeli = 1,
@@ -21,7 +19,6 @@ export enum TransactionType {
   Fee = 4
 }
 
-// Helper functions for enum labels
 export const getAccountTypeLabel = (accountType: AccountType | number): string => {
   switch (accountType) {
     case AccountType.Vadesiz:

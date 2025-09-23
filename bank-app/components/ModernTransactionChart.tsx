@@ -37,15 +37,13 @@ export default function ModernTransactionChart({
   getCurrencySymbol 
 }: ModernTransactionChartProps) {
   const { convertToTRY, rates } = useExchangeRates();
-  // Günlük verileri hazırla
   const dailyData: { [key: string]: { deposits: number; withdrawals: number; date: string } } = {}
   
   transactions.forEach(transaction => {
-    // Tarih değerini kontrol et ve geçerli hale getir
     const transactionDate = new Date(transaction.transactionDate);
     if (isNaN(transactionDate.getTime())) {
       console.warn('Invalid transaction date:', transaction.transactionDate);
-      return; // Geçersiz tarihli işlemi atla
+      return;
     }
     
     const date = transactionDate.toISOString().split('T')[0]
@@ -60,13 +58,11 @@ export default function ModernTransactionChart({
       }
     }
     
-    // Doğru transaction type mapping
     if (transaction.transactionType === 1) { // Deposit
       dailyData[date].deposits += Math.abs(transaction.amount)
     } else if (transaction.transactionType === 2) { // Withdraw
       dailyData[date].withdrawals += Math.abs(transaction.amount)
     } else if (transaction.transactionType === 3) { // Transfer
-      // Transfer işlemlerinde gelen/giden ayrımı
       if (transaction.amount > 0) {
         dailyData[date].deposits += Math.abs(transaction.amount) // Gelen transfer
       } else {
@@ -75,17 +71,14 @@ export default function ModernTransactionChart({
     }
   })
 
-  // Tarihleri sırala ve son 30 günü al
   const sortedDates = Object.keys(dailyData).sort()
   const last30Days = sortedDates.slice(-30)
   
   const chartData = last30Days.map(date => dailyData[date])
 
-  // Hesap dağılımı için veri hazırla - TRY'ye çevir
   const accountData = accounts
     .filter(account => account.balance > 0)
     .map(account => {
-      // Gerçek döviz kurları ile çevir
       const balanceInTRY = convertToTRY(account.balance, account.currencyType || 0);
       
       return {
@@ -96,7 +89,7 @@ export default function ModernTransactionChart({
         originalBalance: account.balance
       };
     })
-    .sort((a, b) => b.value - a.value) // Büyükten küçüğe sırala
+    .sort((a, b) => b.value - a.value)
 
   const accountChartConfig = {
     value: {

@@ -9,5 +9,7 @@ namespace BankProject.Business.Abstract
         Task<decimal> GetExchangeRateAsync(string fromCurrency, string toCurrency);
         Task<Dictionary<string, decimal>> GetAllRatesAsync();
         decimal ConvertCurrency(decimal amount, string fromCurrency, string toCurrency);
+        Task<Dictionary<string, decimal>> GetPreviousDayRatesAsync();
+        Task<Dictionary<string, decimal>> GetDailyRatesWithChangeAsync();
     }
 }

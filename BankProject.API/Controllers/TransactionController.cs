@@ -125,5 +125,59 @@ namespace BankProject.API.Controllers
             var transactions = _transactionService.GetTransactionsByDateRange(startDate, endDate, accountId, UserId);
             return Ok(transactions);
         }
+
+        [HttpPost("exchange-buy")]
+        public async Task<IActionResult> ExchangeBuy([FromBody] ExchangeBuyDTO dto)
+        {
+            try
+            {
+                // Hesap sahipliği kontrolü
+                if (!_transactionService.CheckAccountOwner(dto.FromAccountId, UserId) || 
+                    !_transactionService.CheckAccountOwner(dto.ToAccountId, UserId))
+                {
+                    return Forbid("Bu hesaplara erişim yetkiniz yok.");
+                }
+
+                var transaction = await _transactionService.ExchangeBuyAsync(dto);
+                return Ok(new { 
+                    message = "Döviz alış işlemi başarıyla tamamlandı.",
+                    transactionId = transaction.TransactionId,
+                    amount = dto.AmountTRY,
+                    foreignAmount = dto.AmountForeign,
+                    rate = dto.Rate
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpPost("exchange-sell")]
+        public async Task<IActionResult> ExchangeSell([FromBody] ExchangeSellDTO dto)
+        {
+            try
+            {
+                // Hesap sahipliği kontrolü
+                if (!_transactionService.CheckAccountOwner(dto.FromAccountId, UserId) || 
+                    !_transactionService.CheckAccountOwner(dto.ToAccountId, UserId))
+                {
+                    return Forbid("Bu hesaplara erişim yetkiniz yok.");
+                }
+
+                var transaction = await _transactionService.ExchangeSellAsync(dto);
+                return Ok(new { 
+                    message = "Döviz satış işlemi başarıyla tamamlandı.",
+                    transactionId = transaction.TransactionId,
+                    amount = dto.AmountTRY,
+                    foreignAmount = dto.AmountForeign,
+                    rate = dto.Rate
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
     }
 }

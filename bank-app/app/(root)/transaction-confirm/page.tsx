@@ -72,28 +72,39 @@ export default function TransactionConfirmPage() {
       let result;
       
       if (transactionData.transactionType === 'deposit') {
-        result = await apiService.deposit(
-          transactionData.selectedAccountId,
-          transactionData.amount,
-          transactionData.description
-        );
+        result = await apiService.deposit({
+          AccountId: transactionData.selectedAccountId,
+          Amount: transactionData.amount,
+          Description: transactionData.description
+        });
       } else if (transactionData.transactionType === 'withdraw') {
-        result = await apiService.withdraw(
-          transactionData.selectedAccountId,
-          transactionData.amount,
-          transactionData.description
-        );
+        result = await apiService.withdraw({
+          AccountId: transactionData.selectedAccountId,
+          Amount: transactionData.amount,
+          Description: transactionData.description
+        });
       } else if (transactionData.transactionType === 'transfer' && transactionData.targetAccountId) {
-        result = await apiService.transfer(
-          transactionData.selectedAccountId,
-          transactionData.targetAccountId,
-          transactionData.amount,
-          transactionData.description
-        );
+        result = await apiService.transfer({
+          FromAccountId: transactionData.selectedAccountId,
+          ToAccountId: transactionData.targetAccountId,
+          Amount: transactionData.amount,
+          Description: transactionData.description
+        });
       }
 
-      // Başarılı işlem sonrası ana sayfaya yönlendir
-      router.push('/my-banks?success=true');
+      // Başarılı işlem sonrası başarı sayfasına yönlendir
+      const successParams = new URLSearchParams({
+        type: transactionData.transactionType,
+        amount: transactionData.amount.toString(),
+        description: transactionData.description || '',
+        accountId: transactionData.selectedAccountId.toString()
+      });
+      
+      if (transactionData.transactionType === 'transfer' && transactionData.targetAccountId) {
+        successParams.set('targetAccountId', transactionData.targetAccountId.toString());
+      }
+      
+      router.push(`/transaction-success?${successParams.toString()}`);
     } catch (err: any) {
       setError(err.message || 'İşlem gerçekleştirilemedi');
     } finally {

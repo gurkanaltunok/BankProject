@@ -19,12 +19,14 @@ namespace BankProject.API.Controllers
     {
         private readonly IAccountService _accountService;
         private readonly IUserService _userService;
+        private readonly IExchangeRateService _exchangeRateService;
         private readonly HttpClient _httpClient;
 
-        public AccountsController(IAccountService accountService, IUserService userService, HttpClient httpClient)
+        public AccountsController(IAccountService accountService, IUserService userService, IExchangeRateService exchangeRateService, HttpClient httpClient)
         {
             _accountService = accountService;
             _userService = userService;
+            _exchangeRateService = exchangeRateService;
             _httpClient = httpClient;
         }
 
@@ -79,6 +81,42 @@ namespace BankProject.API.Controllers
             var totalBalanceInTRY = await CalculateTotalBalanceInTRY(accounts);
             
             return Ok(new { totalBalanceInTRY });
+        }
+
+        private async Task<decimal> CalculateTotalBalanceInTRY(List<Account> accounts)
+        {
+            decimal totalBalance = 0;
+            Console.WriteLine($"DEBUG: Calculating total balance for {accounts.Count} accounts at {DateTime.Now}");
+
+            foreach (var account in accounts)
+            {
+                if (account.CurrencyType == CurrencyType.TRY)
+                {
+                    totalBalance += account.Balance;
+                    Console.WriteLine($"DEBUG: TRY account {account.AccountId}: {account.Balance} TRY");
+                }
+                else
+                {
+                    var convertedAmount = _exchangeRateService.ConvertCurrency(account.Balance, GetCurrencyString(account.CurrencyType), "TRY");
+                    totalBalance += convertedAmount;
+                    Console.WriteLine($"DEBUG: {GetCurrencyString(account.CurrencyType)} account {account.AccountId}: {account.Balance} {GetCurrencyString(account.CurrencyType)} = {convertedAmount} TRY");
+                }
+            }
+
+            Console.WriteLine($"DEBUG: Total balance calculated: {totalBalance} TRY");
+            return totalBalance;
+        }
+
+        private string GetCurrencyString(CurrencyType currencyType)
+        {
+            return currencyType switch
+            {
+                CurrencyType.TRY => "TRY",
+                CurrencyType.USD => "USD",
+                CurrencyType.EUR => "EUR",
+                CurrencyType.GBP => "GBP",
+                _ => "TRY"
+            };
         }
 
         [HttpGet("by-iban/{iban}")]
@@ -149,37 +187,6 @@ namespace BankProject.API.Controllers
             return Ok(updatedAccount);
         }
 
-        private async Task<decimal> CalculateTotalBalanceInTRY(List<Account> accounts)
-        {
-            decimal totalBalance = 0;
-
-            foreach (var account in accounts)
-            {
-                if (account.CurrencyType == CurrencyType.TRY)
-                {
-                    totalBalance += account.Balance;
-                }
-                else
-                {
-                    var exchangeRate = await GetCurrentExchangeRateAsync(GetCurrencyString(account.CurrencyType), "TRY");
-                    totalBalance += account.Balance * exchangeRate;
-                }
-            }
-
-            return totalBalance;
-        }
-
-        private string GetCurrencyString(CurrencyType currencyType)
-        {
-            return currencyType switch
-            {
-                CurrencyType.TRY => "TRY",
-                CurrencyType.USD => "USD",
-                CurrencyType.EUR => "EUR",
-                CurrencyType.GBP => "GBP",
-                _ => "TRY"
-            };
-        }
 
         private async Task<decimal> GetCurrentExchangeRateAsync(string fromCurrency, string toCurrency)
         {

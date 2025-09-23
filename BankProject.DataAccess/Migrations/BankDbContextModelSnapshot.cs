@@ -165,30 +165,21 @@ namespace BankProject.DataAccess.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ExchangeRateId"));
 
-                    b.Property<DateTime>("Date")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("FromCurrency")
+                    b.Property<string>("Currency")
                         .IsRequired()
                         .HasMaxLength(3)
                         .HasColumnType("nvarchar(3)");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("datetime2");
 
                     b.Property<decimal>("Rate")
                         .HasPrecision(18, 6)
                         .HasColumnType("decimal(18,6)");
 
-                    b.Property<string>("Source")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<string>("ToCurrency")
-                        .IsRequired()
-                        .HasMaxLength(3)
-                        .HasColumnType("nvarchar(3)");
-
                     b.HasKey("ExchangeRateId");
 
-                    b.HasIndex("FromCurrency", "ToCurrency", "Date")
+                    b.HasIndex("Currency", "Date")
                         .IsUnique();
 
                     b.ToTable("ExchangeRates");
@@ -377,7 +368,7 @@ namespace BankProject.DataAccess.Migrations
                         .IsRequired();
 
                     b.HasOne("BankProject.Entities.ExchangeRate", "ExchangeRate")
-                        .WithMany("Transactions")
+                        .WithMany()
                         .HasForeignKey("ExchangeRateId")
                         .OnDelete(DeleteBehavior.SetNull);
 
@@ -405,11 +396,6 @@ namespace BankProject.DataAccess.Migrations
                         .IsRequired();
 
                     b.Navigation("Address");
-                });
-
-            modelBuilder.Entity("BankProject.Entities.ExchangeRate", b =>
-                {
-                    b.Navigation("Transactions");
                 });
 
             modelBuilder.Entity("BankProject.Entities.Role", b =>

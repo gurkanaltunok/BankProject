@@ -6,13 +6,23 @@ import { BalanceHistory } from '@/lib/api';
 interface BalanceHistoryChartProps {
   balanceHistory: BalanceHistory[];
   loading?: boolean;
+  currencyType?: number; // 0: TRY, 1: USD, 2: EUR, 3: GBP
 }
 
-export default function BalanceHistoryChart({ balanceHistory, loading }: BalanceHistoryChartProps) {
+export default function BalanceHistoryChart({ balanceHistory, loading, currencyType = 0 }: BalanceHistoryChartProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [hoveredPoint, setHoveredPoint] = useState<{ x: number; y: number; data: BalanceHistory } | null>(null);
 
-  // Smooth curve function (Catmull-Rom spline)
+  const getCurrencySymbol = (currencyType: number) => {
+    switch (currencyType) {
+      case 0: return '₺'; // TRY
+      case 1: return '$'; // USD
+      case 2: return '€'; // EUR
+      case 3: return '£'; // GBP
+      default: return '₺';
+    }
+  };
+
   const getSmoothCurve = (points: { x: number; y: number }[]) => {
     if (points.length < 2) return points;
     
@@ -24,7 +34,6 @@ export default function BalanceHistoryChart({ balanceHistory, loading }: Balance
       const p2 = points[i + 1];
       const p3 = i < points.length - 2 ? points[i + 2] : points[i + 1];
       
-      // Catmull-Rom spline
       for (let t = 0; t <= 1; t += 0.1) {
         const t2 = t * t;
         const t3 = t2 * t;
@@ -57,59 +66,48 @@ export default function BalanceHistoryChart({ balanceHistory, loading }: Balance
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Canvas boyutlarını ayarla
     const rect = canvas.getBoundingClientRect();
     canvas.width = rect.width * window.devicePixelRatio;
     canvas.height = rect.height * window.devicePixelRatio;
     ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
 
-    // Grafik boyutları
     const padding = 60;
     const chartWidth = rect.width - (padding * 2);
     const chartHeight = rect.height - (padding * 2);
 
-    // Veriyi hazırla (tarihe göre sırala)
     const sortedData = [...balanceHistory].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     
     if (sortedData.length === 0) return;
 
-    // Min ve max değerleri bul
     const balances = sortedData.map(d => d.balance);
     const minBalance = Math.min(...balances);
     const maxBalance = Math.max(...balances);
     const balanceRange = maxBalance - minBalance;
 
-    // Y ekseni için padding ekle
     const yPadding = balanceRange * 0.15;
     const yMin = minBalance - yPadding;
     const yMax = maxBalance + yPadding;
 
-    // Temizle
     ctx.clearRect(0, 0, rect.width, rect.height);
 
-    // Gradient arka plan
     const gradient = ctx.createLinearGradient(0, 0, 0, rect.height);
     gradient.addColorStop(0, '#f8fafc');
     gradient.addColorStop(1, '#f1f5f9');
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, rect.width, rect.height);
 
-    // Noktaları hesapla
     const points = sortedData.map((point, index) => {
       const x = padding + (chartWidth / (sortedData.length - 1)) * index;
       const y = padding + chartHeight - ((point.balance - yMin) / (yMax - yMin)) * chartHeight;
       return { x, y, data: point };
     });
 
-    // Smooth curve oluştur
     const smoothPoints = getSmoothCurve(points);
 
-    // Gradient area
     const areaGradient = ctx.createLinearGradient(0, padding, 0, padding + chartHeight);
     areaGradient.addColorStop(0, 'rgba(59, 130, 246, 0.1)');
     areaGradient.addColorStop(1, 'rgba(59, 130, 246, 0.02)');
 
-    // Area fill
     ctx.fillStyle = areaGradient;
     ctx.beginPath();
     ctx.moveTo(padding, padding + chartHeight);
@@ -120,13 +118,11 @@ export default function BalanceHistoryChart({ balanceHistory, loading }: Balance
     ctx.closePath();
     ctx.fill();
 
-    // Outerglow effect için shadow
     ctx.shadowColor = 'rgba(59, 130, 246, 0.3)';
     ctx.shadowBlur = 20;
     ctx.shadowOffsetX = 0;
     ctx.shadowOffsetY = 0;
 
-    // Ana çizgi
     ctx.strokeStyle = '#3b82f6';
     ctx.lineWidth = 3;
     ctx.lineCap = 'round';
@@ -143,11 +139,9 @@ export default function BalanceHistoryChart({ balanceHistory, loading }: Balance
 
     ctx.stroke();
 
-    // Shadow'u temizle
     ctx.shadowColor = 'transparent';
     ctx.shadowBlur = 0;
 
-    // Noktalar (sadece orijinal veri noktaları)
     points.forEach((point, index) => {
       ctx.fillStyle = '#ffffff';
       ctx.strokeStyle = '#3b82f6';
@@ -159,7 +153,6 @@ export default function BalanceHistoryChart({ balanceHistory, loading }: Balance
       ctx.stroke();
     });
 
-    // Hovered point highlight
     if (hoveredPoint) {
       ctx.fillStyle = '#1d4ed8';
       ctx.strokeStyle = '#ffffff';
@@ -171,7 +164,6 @@ export default function BalanceHistoryChart({ balanceHistory, loading }: Balance
       ctx.stroke();
     }
 
-    // Y ekseni etiketleri (daha sade)
     ctx.fillStyle = '#64748b';
     ctx.font = '11px Inter, sans-serif';
     ctx.textAlign = 'right';
@@ -180,22 +172,19 @@ export default function BalanceHistoryChart({ balanceHistory, loading }: Balance
     for (let i = 0; i <= 4; i++) {
       const value = yMin + (yMax - yMin) * (1 - i / 4);
       const y = padding + (chartHeight / 4) * i;
-      ctx.fillText(`₺${value.toFixed(0)}`, padding - 15, y);
+      ctx.fillText(`${getCurrencySymbol(currencyType)}${value.toFixed(0)}`, padding - 15, y);
     }
 
-    // X ekseni etiketleri (sadece başlangıç ve bitiş)
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     ctx.fillStyle = '#64748b';
     ctx.font = '11px Inter, sans-serif';
 
     if (sortedData.length > 0) {
-      // Başlangıç tarihi
       const startDate = new Date(sortedData[0].date);
       const startDateStr = startDate.toLocaleDateString('tr-TR', { month: 'short', day: 'numeric' });
       ctx.fillText(startDateStr, padding, padding + chartHeight + 15);
 
-      // Bitiş tarihi
       const endDate = new Date(sortedData[sortedData.length - 1].date);
       const endDateStr = endDate.toLocaleDateString('tr-TR', { month: 'short', day: 'numeric' });
       ctx.fillText(endDateStr, padding + chartWidth, padding + chartHeight + 15);
@@ -218,7 +207,6 @@ export default function BalanceHistoryChart({ balanceHistory, loading }: Balance
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
 
-    // Veriyi hazırla
     const sortedData = [...balanceHistory].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     const balances = sortedData.map(d => d.balance);
     const minBalance = Math.min(...balances);
@@ -228,14 +216,12 @@ export default function BalanceHistoryChart({ balanceHistory, loading }: Balance
     const yMin = minBalance - yPadding;
     const yMax = maxBalance + yPadding;
 
-    // Noktaları hesapla
     const points = sortedData.map((point, index) => {
       const x = padding + (chartWidth / (sortedData.length - 1)) * index;
       const y = padding + chartHeight - ((point.balance - yMin) / (yMax - yMin)) * chartHeight;
       return { x, y, data: point };
     });
 
-    // En yakın noktayı bul
     let closestPoint = null;
     let minDistance = Infinity;
 
@@ -299,7 +285,7 @@ export default function BalanceHistoryChart({ balanceHistory, loading }: Balance
             }}
           >
             <div className="font-medium">
-              ₺{hoveredPoint.data.balance.toLocaleString('tr-TR', { 
+              {getCurrencySymbol(currencyType)}{hoveredPoint.data.balance.toLocaleString('tr-TR', { 
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2
               })}

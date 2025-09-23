@@ -42,7 +42,6 @@ const AuthForm = ({ type }: AuthFormProps) => {
   const [loadingCities, setLoadingCities] = useState(false);
   const [loadingDistricts, setLoadingDistricts] = useState(false);
 
-  // Şehirleri yükle
   useEffect(() => {
     if (type === 'sign-up') {
       loadCities();
@@ -74,21 +73,17 @@ const AuthForm = ({ type }: AuthFormProps) => {
   };
 
 
-  // Telefon numarası formatlama fonksiyonu
   const formatPhoneNumber = (value: string) => {
-    let formatted = value.replace(/\D/g, ''); // Sadece rakamlar
+    let formatted = value.replace(/\D/g, '');
     
-    // Maksimum 11 hane (0 dahil)
     if (formatted.length > 11) {
       formatted = formatted.substring(0, 11);
     }
     
-    // Eğer 0 ile başlamıyorsa 0 ekle
     if (formatted.length > 0 && !formatted.startsWith('0')) {
       formatted = '0' + formatted;
     }
-    
-    // Formatla
+
     if (formatted.length >= 1) {
       if (formatted.length <= 1) {
         formatted = formatted;
@@ -108,26 +103,23 @@ const AuthForm = ({ type }: AuthFormProps) => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    
-    // Telefon numarası formatı
+
     if (name === 'PhoneNumber') {
       const formatted = formatPhoneNumber(value);
       setFormData(prev => ({ ...prev, [name]: formatted }));
       return;
     }
 
-    // Şifre alanları - sadece rakam
     if (name === 'Password' || name === 'ConfirmPassword') {
-      const numericValue = value.replace(/\D/g, ''); // Sadece rakamlar
+      const numericValue = value.replace(/\D/g, '');
       if (numericValue.length <= 6) {
         setFormData(prev => ({ ...prev, [name]: numericValue }));
       }
       return;
     }
 
-    // TCKN - sadece rakam
     if (name === 'TCKN') {
-      const numericValue = value.replace(/\D/g, ''); // Sadece rakamlar
+      const numericValue = value.replace(/\D/g, '');
       if (numericValue.length <= 11) {
         setFormData(prev => ({ ...prev, [name]: numericValue }));
       }
@@ -153,7 +145,6 @@ const AuthForm = ({ type }: AuthFormProps) => {
       AddressDetail: ''
     }));
 
-    // İlçeleri yükle
     if (selectedCityData) {
       loadDistricts(selectedCityData.id);
     }
@@ -257,14 +248,11 @@ const AuthForm = ({ type }: AuthFormProps) => {
         await login(formData.TCKN, formData.Password);
         router.push('/');
       } else {
-        // Telefon numarasını sadece rakamlara çevir (0'dan sonrasını al)
         const phoneDigits = formData.PhoneNumber.replace(/\D/g, '');
-        const cleanPhone = phoneDigits.substring(1); // 0'ı çıkar
+        const cleanPhone = phoneDigits.substring(1); // 0 ı çıkar
 
-        // Adres bilgilerini birleştir
         const fullAddress = `${formData.AddressDetail}, ${formData.Neighborhood}, ${formData.District}, ${formData.City}, ${formData.Country}`;
 
-        // ConfirmPassword'ü çıkararak registerData oluştur
         const { ConfirmPassword, ...formDataWithoutConfirm } = formData;
         const registerData = {
           ...formDataWithoutConfirm,
@@ -402,7 +390,6 @@ const AuthForm = ({ type }: AuthFormProps) => {
                     value={formData.PhoneNumber}
                     onChange={handleInputChange}
                     onKeyDown={(e) => {
-                      // Sadece rakam, backspace, delete, tab, enter, arrow keys'a izin ver
                       const allowedKeys = ['Backspace', 'Delete', 'Tab', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
                       if (!allowedKeys.includes(e.key) && !/^\d$/.test(e.key)) {
                         e.preventDefault();

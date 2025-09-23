@@ -69,13 +69,13 @@ namespace BankProject.DataAccess
                 .HasPrecision(18, 6);
 
             modelBuilder.Entity<ExchangeRate>()
-                .HasIndex(e => new { e.FromCurrency, e.ToCurrency, e.Date })
+                .HasIndex(e => new { e.Currency, e.Date })
                 .IsUnique();
 
             // Transaction - ExchangeRate ilişkisi
             modelBuilder.Entity<Transaction>()
                 .HasOne(t => t.ExchangeRate)
-                .WithMany(e => e.Transactions)
+                .WithMany()
                 .HasForeignKey(t => t.ExchangeRateId)
                 .OnDelete(DeleteBehavior.SetNull);
 

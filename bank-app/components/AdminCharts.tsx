@@ -37,7 +37,6 @@ interface AdminChartsProps {
 }
 
 export default function AdminCharts({ bankBalance, totalBalance, totalUsers, totalAccounts, accounts = [], dailyTransactionVolume = [], dailyCommissionRevenue = [] }: AdminChartsProps) {
-  // 1. Para Birimi Dağılımı (Doughnut Chart)
   const currencyDistribution = {
     labels: ['TRY', 'USD', 'EUR', 'GBP'],
     datasets: [
@@ -120,7 +119,7 @@ export default function AdminCharts({ bankBalance, totalBalance, totalUsers, tot
         data: dailyCommissionRevenue.length > 0 
           ? dailyCommissionRevenue.map((item: any) => item.commission)
           : [0, 0, 0, 0, 0, 0, 0], // Gerçek veri yoksa sıfır
-        borderColor: 'rgba(37, 99, 235, 1)', // Mavi renk (haftalık işlem hacmiyle aynı)
+        borderColor: 'rgba(37, 99, 235, 1)', // Mavi renk
         backgroundColor: 'rgba(37, 99, 235, 0.1)',
         tension: 0.4,
         fill: true,
@@ -178,7 +177,7 @@ export default function AdminCharts({ bankBalance, totalBalance, totalUsers, tot
     maintainAspectRatio: false,
     plugins: {
       legend: {
-        display: false, // Legend'ı gizle
+        display: false,
       },
       tooltip: {
         callbacks: {

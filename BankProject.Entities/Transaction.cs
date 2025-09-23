@@ -18,11 +18,10 @@ namespace BankProject.Entities
         [Precision(18, 2)]
         public decimal? Fee { get; set; } = 0;
         [Precision(18, 2)]
-        public decimal? FeeInTRY { get; set; } = 0; // Fee'nin TL karşılığı
+        public decimal? FeeInTRY { get; set; } = 0;
         [Precision(18, 2)]
         public decimal? BalanceAfter { get; set; }
         
-        // Exchange Rate ilişkisi
         [ForeignKey("ExchangeRate")]
         public int? ExchangeRateId { get; set; }
         public ExchangeRate? ExchangeRate { get; set; }

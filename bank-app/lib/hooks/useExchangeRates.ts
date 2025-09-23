@@ -15,16 +15,30 @@ export const useExchangeRates = () => {
     setError(null);
     
     try {
-      // TCMB API'si yerine sabit kurlar kullanıyoruz (gerçek uygulamada TCMB API'si kullanılmalı)
-      const mockRates: ExchangeRate[] = [
-        { currency: 'USD', rate: 34.50 }, // 1 USD = 34.50 TL
-        { currency: 'EUR', rate: 37.20 }, // 1 EUR = 37.20 TL
-        { currency: 'TRY', rate: 1.00 },  // 1 TL = 1.00 TL
+      // Backend API'mizden güncel döviz kurlarını çek
+      const response = await fetch('http://localhost:5020/api/Test/exchange-service');
+      
+      if (!response.ok) {
+        throw new Error(`API Hatası: ${response.status} ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      
+      // API'den gelen kurları kontrol et
+      if (!data.rates || Object.keys(data.rates).length === 0) {
+        throw new Error('ExchangeRate-API çalışmıyor. Kurlar alınamadı.');
+      }
+      
+      // Backend'den gelen kurları kullan
+      const newRates: ExchangeRate[] = [
+        { currency: 'USD', rate: data.rates.USD || 1 },
+        { currency: 'EUR', rate: data.rates.EUR || 1 },
+        { currency: 'TRY', rate: 1.00 },
       ];
       
-      setRates(mockRates);
+      setRates(newRates);
     } catch (err) {
-      setError('Döviz kurları alınamadı');
+      setError(err instanceof Error ? err.message : 'Döviz kurları alınamadı');
       console.error('Exchange rate fetch error:', err);
     } finally {
       setLoading(false);

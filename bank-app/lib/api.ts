@@ -1,13 +1,11 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5020/api';
 
-// API Response types
 interface ApiResponse<T = any> {
   data?: T;
   message?: string;
   success?: boolean;
 }
 
-// Auth types matching the API
 interface LoginRequest {
   TCKN: string;
   Password: string;
@@ -31,7 +29,6 @@ interface AuthResponse {
   RoleId: number;
 }
 
-// Account types matching the API
 interface AccountDto {
   UserId: number;
   CurrencyType: number; // 0: TRY, 1: USD, 2: EUR
@@ -49,7 +46,6 @@ interface Account {
   iban: string;
   dateCreated: string;
   isActive: boolean;
-  // Additional fields for UI compatibility
   availableBalance?: number;
   currentBalance?: number;
   officialName?: string;
@@ -83,7 +79,6 @@ interface Account {
   };
 }
 
-// Transaction types
 interface DepositWithdrawRequest {
   AccountId: number;
   Amount: number;
@@ -129,11 +124,8 @@ class ApiService {
 
   private async handleResponse<T>(response: Response): Promise<T> {
     if (!response.ok) {
-      // Handle JWT token expiration
       if (response.status === 401) {
-        // Clear stored authentication data
         this.logout();
-        // Redirect to login page
         if (typeof window !== 'undefined') {
           window.location.href = '/sign-in';
         }
@@ -152,7 +144,6 @@ class ApiService {
     return await response.text() as unknown as T;
   }
 
-  // Auth methods
   async login(credentials: LoginRequest): Promise<AuthResponse> {
     console.log('Login request:', credentials);
     
@@ -169,7 +160,6 @@ class ApiService {
     
     console.log('Response data:', result);
     
-    // Convert camelCase response to PascalCase
     const authResponse: AuthResponse = {
       Token: result.token || result.Token,
       UserId: result.userId || result.UserId,
@@ -178,7 +168,6 @@ class ApiService {
     
     console.log('Converted auth response:', authResponse);
     
-    // Store token in localStorage
     if (authResponse.Token) {
       localStorage.setItem('authToken', authResponse.Token);
       localStorage.setItem('userId', authResponse.UserId.toString());
@@ -212,19 +201,16 @@ class ApiService {
     if (!token) return false;
     
     try {
-      // Check if token is expired
       const payload = JSON.parse(atob(token.split('.')[1]));
       const currentTime = Math.floor(Date.now() / 1000);
       
       if (payload.exp && payload.exp < currentTime) {
-        // Token is expired, clear it
         this.logout();
         return false;
       }
       
       return true;
     } catch (error) {
-      // Invalid token format, clear it
       this.logout();
       return false;
     }
@@ -235,14 +221,12 @@ class ApiService {
     return userId ? parseInt(userId) : null;
   }
 
-  // Method to validate token and refresh if needed
   async validateToken(): Promise<boolean> {
     if (!this.isAuthenticated()) {
       return false;
     }
 
     try {
-      // Try to make a request to validate the token
       const response = await fetch(`${API_BASE_URL}/users/me`, {
         headers: this.getAuthHeaders(),
       });
@@ -260,11 +244,9 @@ class ApiService {
     }
   }
 
-  // Account methods
   async createAccount(accountData: AccountDto): Promise<Account> {
     console.log('Creating account with data:', accountData);
     
-    // Backend expects AccountDTO directly with string values
     const requestData = {
       UserId: accountData.UserId,
       CurrencyType: accountData.CurrencyType.toString(),
@@ -317,7 +299,6 @@ class ApiService {
     console.log('First account keys:', Object.keys(data[0] || {}));
     console.log('First account values:', Object.values(data[0] || {}));
     
-    // Backend'den gelen camelCase veriyi frontend formatına çevir
     return data.map(account => ({
       id: account.accountId,
       accountId: account.accountId,
@@ -328,7 +309,6 @@ class ApiService {
       isActive: account.isActive,
       userId: account.userId,
       dateCreated: account.dateCreated,
-      // Additional fields for UI compatibility
       availableBalance: account.balance || 0,
       currentBalance: account.balance || 0,
       officialName: `${account.accountType || 1} Hesabı`,
@@ -450,7 +430,6 @@ class ApiService {
     console.log('First transaction keys:', data[0] ? Object.keys(data[0]) : 'No data');
     console.log('First transaction values:', data[0] ? Object.values(data[0]) : 'No data');
     
-    // Backend'den gelen veriyi frontend formatına çevir
     const mappedData = data.map(transaction => ({
       id: transaction.transactionId,
       accountId: transaction.accountId,
@@ -493,7 +472,6 @@ class ApiService {
     const data = await this.handleResponse<any[]>(response);
     console.log('getTransactionsByDateRange raw response:', data);
     
-    // Backend'den gelen camelCase veriyi frontend formatına çevir
     const mappedData = data.map(transaction => ({
       id: transaction.transactionId,
       accountId: transaction.accountId,
@@ -537,7 +515,6 @@ class ApiService {
     return await this.handleResponse<any>(response);
   }
 
-  // Balance History methods
   async getBalanceHistoryByAccount(accountId: number): Promise<any[]> {
     const response = await fetch(`${API_BASE_URL}/balancehistory/account/${accountId}`, {
       headers: this.getAuthHeaders(),
@@ -554,9 +531,8 @@ class ApiService {
     return await this.handleResponse<any[]>(response);
   }
 
-  // Admin API methods
+  // Admin API
   async getAdminDashboard(): Promise<any> {
-    // Cache-busting için timestamp ekle
     const timestamp = new Date().getTime();
     const response = await fetch(`${API_BASE_URL}/admin/dashboard?t=${timestamp}`, {
       headers: this.getAuthHeaders(),
@@ -615,7 +591,6 @@ class ApiService {
     return await this.handleResponse<any[]>(response);
   }
 
-  // Location API methods
   async getCities(): Promise<any[]> {
     const response = await fetch(`${API_BASE_URL}/location/cities`);
     return await this.handleResponse<any[]>(response);
@@ -626,8 +601,6 @@ class ApiService {
     return await this.handleResponse<any[]>(response);
   }
 
-
-  // Address API methods
   async createAddress(addressData: any): Promise<any> {
     const response = await fetch(`${API_BASE_URL}/address`, {
       method: 'POST',
@@ -665,6 +638,26 @@ class ApiService {
 
     return await this.handleResponse<any>(response);
   }
+
+  async exchangeBuy(request: ExchangeBuyRequest): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}/transactions/exchange-buy`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(request),
+    });
+
+    return await this.handleResponse<any>(response);
+  }
+
+  async exchangeSell(request: ExchangeSellRequest): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}/transactions/exchange-sell`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(request),
+    });
+
+    return await this.handleResponse<any>(response);
+  }
 }
 
 export const apiService = new ApiService();
@@ -680,6 +673,24 @@ export interface BalanceHistory {
   transactionId?: number;
 }
 
+interface ExchangeBuyRequest {
+  FromAccountId: number;
+  ToAccountId: number;
+  AmountTRY: number;
+  AmountForeign: number;
+  Rate: number;
+  Description?: string;
+}
+
+interface ExchangeSellRequest {
+  FromAccountId: number;
+  ToAccountId: number;
+  AmountForeign: number;
+  AmountTRY: number;
+  Rate: number;
+  Description?: string;
+}
+
 export type { 
   LoginRequest, 
   RegisterRequest, 
@@ -688,5 +699,7 @@ export type {
   AccountDto, 
   Transaction, 
   DepositWithdrawRequest, 
-  TransferRequest 
+  TransferRequest,
+  ExchangeBuyRequest,
+  ExchangeSellRequest
 };

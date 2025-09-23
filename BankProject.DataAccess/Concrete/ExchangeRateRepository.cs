@@ -19,10 +19,10 @@ namespace BankProject.DataAccess.Concrete
             return exchangeRate;
         }
 
-        public ExchangeRate? GetLatestExchangeRate(string fromCurrency, string toCurrency)
+        public ExchangeRate? GetLatestExchangeRate(string currency)
         {
             return _context.ExchangeRates
-                .Where(e => e.FromCurrency == fromCurrency && e.ToCurrency == toCurrency)
+                .Where(e => e.Currency == currency)
                 .OrderByDescending(e => e.Date)
                 .FirstOrDefault();
         }
@@ -38,6 +38,31 @@ namespace BankProject.DataAccess.Concrete
         public List<ExchangeRate> GetAllExchangeRates()
         {
             return _context.ExchangeRates
+                .OrderByDescending(e => e.Date)
+                .ToList();
+        }
+
+        public List<ExchangeRate> GetExchangeRatesByDate(DateTime date)
+        {
+            var startOfDay = date.Date;
+            var endOfDay = startOfDay.AddDays(1);
+            
+            return _context.ExchangeRates
+                .Where(e => e.Date >= startOfDay && e.Date < endOfDay)
+                .OrderByDescending(e => e.Date)
+                .ToList();
+        }
+
+        public List<ExchangeRate> GetPreviousDayExchangeRates()
+        {
+            var yesterday = DateTime.UtcNow.Date.AddDays(-1);
+            return GetExchangeRatesByDate(yesterday);
+        }
+
+        public List<ExchangeRate> GetExchangeRatesByCurrency(string currency)
+        {
+            return _context.ExchangeRates
+                .Where(e => e.Currency == currency)
                 .OrderByDescending(e => e.Date)
                 .ToList();
         }

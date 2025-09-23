@@ -127,6 +127,11 @@ const AccountDetail = () => {
           return 'Transfer (Giden)';
         }
       case 4: return 'İşlem Ücreti';
+      case 5: return 'Döviz Alış';
+      case 6: return 'Döviz Satış';
+      case 7: return 'Döviz Komisyonu';
+      case 8: return 'Döviz Girişi';
+      case 9: return 'Döviz Çıkışı';
       default: return 'Bilinmeyen';
     }
   };
@@ -137,6 +142,11 @@ const AccountDetail = () => {
       case 2: return 'text-red-600';
       case 3: return 'text-blue-600';
       case 4: return 'text-orange-600'; // Fee transaction'ları için turuncu
+      case 5: return 'text-red-600'; // Döviz Alış - Kırmızı
+      case 6: return 'text-green-600'; // Döviz Satış - Yeşil
+      case 7: return 'text-purple-600'; // Döviz Komisyonu - Mor
+      case 8: return 'text-green-600'; // Döviz Girişi - Yeşil
+      case 9: return 'text-red-600'; // Döviz Çıkışı - Kırmızı
       default: return 'text-gray-600';
     }
   };
@@ -218,7 +228,8 @@ const AccountDetail = () => {
         <div className="mt-8">
           <BalanceHistoryChart 
             balanceHistory={balanceHistory} 
-            loading={balanceHistoryLoading} 
+            loading={balanceHistoryLoading}
+            currencyType={selectedAccount?.currencyType}
           />
         </div>
 
@@ -330,12 +341,16 @@ const AccountDetail = () => {
                           <span className={`font-semibold ${
                             (transaction.transactionType === 1) || 
                             (transaction.transactionType === 3 && transaction.targetAccountId === selectedAccount?.id) ||
-                            (transaction.transactionType === 4) // Fee transaction'ları pozitif göster
+                            (transaction.transactionType === 4) || // Fee transaction'ları pozitif göster
+                            (transaction.transactionType === 6) || // Döviz Satış pozitif
+                            (transaction.transactionType === 8)    // Döviz Girişi pozitif
                               ? 'text-green-600' : 'text-red-600'
                           }`}>
                             {(transaction.transactionType === 1) || 
                              (transaction.transactionType === 3 && transaction.targetAccountId === selectedAccount?.id) ||
-                             (transaction.transactionType === 4) // Fee transaction'ları pozitif göster
+                             (transaction.transactionType === 4) || // Fee transaction'ları pozitif göster
+                             (transaction.transactionType === 6) || // Döviz Satış pozitif
+                             (transaction.transactionType === 8)    // Döviz Girişi pozitif
                               ? '+' : '-'}
                             {getCurrencySymbol(selectedAccount.currencyType || 0)}
                             {Math.abs(transaction.amount).toLocaleString('tr-TR', { 

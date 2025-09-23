@@ -51,23 +51,24 @@ const TransactionHistory = () => {
   }, [accounts, accountIdParam]);
 
   // Load transactions function
-  const loadTransactions = async (accountId?: number) => {
+  const loadTransactions = async (accountId?: number, useDateFilter: boolean = false) => {
     try {
       setError('');
       const finalAccountId = accountId !== undefined ? accountId : selectedAccountId;
-      console.log('loadTransactions called with:', { accountId, selectedAccountId, finalAccountId });
+      console.log('loadTransactions called with:', { accountId, selectedAccountId, finalAccountId, useDateFilter, startDate, endDate });
+      console.log('finalAccountId type:', typeof finalAccountId, 'value:', finalAccountId);
       
       let result;
-      if (finalAccountId) {
+      if (finalAccountId !== undefined && finalAccountId !== null) {
         // Belirli bir account seçiliyse getTransactionsByAccount kullan
         console.log('Using getTransactionsByAccount for account:', finalAccountId);
         result = await getTransactionsByAccount(finalAccountId);
       } else {
-        // Tüm hesaplar için getTransactionsByDateRange kullan (tarih filtreleme yapmadan)
-        console.log('Using getTransactionsByDateRange for all accounts (no date filter)');
+        // Tüm hesaplar için getTransactionsByDateRange kullan
+        console.log('Using getTransactionsByDateRange for all accounts');
         result = await getTransactionsByDateRange(
-          undefined, // startDate
-          undefined, // endDate
+          useDateFilter ? startDate : undefined, // startDate
+          useDateFilter ? endDate : undefined,   // endDate
           undefined  // accountId
         );
       }
@@ -86,26 +87,13 @@ const TransactionHistory = () => {
     }
   }, [accounts.length, selectedAccountId]);
 
-  // Handle account selection
-  const handleAccountChange = async (accountId: number | undefined) => {
-    console.log('handleAccountChange called with:', accountId);
-    setSelectedAccountId(accountId);
-    console.log('setSelectedAccountId called, new value should be:', accountId);
-    // loadTransactions'ı useEffect'te çağıracağız, burada çağırmaya gerek yok
-  };
 
   // Handle form submission
   const handleFilter = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('handleFilter called with selectedAccountId:', selectedAccountId);
-    // Form submission'da account seçiliyse getTransactionsByAccount kullan
-    if (selectedAccountId) {
-      console.log('Form filter: Using getTransactionsByAccount for account:', selectedAccountId);
-      await getTransactionsByAccount(selectedAccountId);
-    } else {
-      console.log('Form filter: Using getTransactionsByDateRange for all accounts (no date filter)');
-      await getTransactionsByDateRange(undefined, undefined, undefined);
-    }
+    console.log('handleFilter called with selectedAccountId:', selectedAccountId, 'startDate:', startDate, 'endDate:', endDate);
+    // Form submission'da tarih filtreleme kullan
+    await loadTransactions(selectedAccountId, true);
   };
 
   // Handle quick filters
@@ -149,20 +137,15 @@ const TransactionHistory = () => {
     
     // Tarih değiştikten sonra transaction'ları yeniden yükle
     console.log('Quick filter applied, reloading transactions...');
-    // Quick filter'lar sadece tarih değiştiriyor, account seçiliyse getTransactionsByAccount kullan
-    if (selectedAccountId) {
-      console.log('Quick filter: Using getTransactionsByAccount for account:', selectedAccountId);
-      await getTransactionsByAccount(selectedAccountId);
-    } else {
-      console.log('Quick filter: Using getTransactionsByDateRange for all accounts (no date filter)');
-      await getTransactionsByDateRange(undefined, undefined, undefined);
-    }
+    // Quick filter'lar tarih değiştiriyor, tarih filtreleme kullan
+    await loadTransactions(selectedAccountId, true);
   };
 
 
   // Get transaction type display info
   const getTransactionInfo = (transaction: any, currentAccountId: number) => {
     const isFee = transaction.transactionType === 4 || transaction.description?.includes('İşlem Ücreti') || false;
+    const isExchangeCommission = transaction.transactionType === 7;
     
     // İşlem ücreti ise diğer kontrolleri yapma
     if (isFee) {
@@ -173,9 +156,22 @@ const TransactionHistory = () => {
       };
     }
     
+    // Döviz komisyonu
+    if (isExchangeCommission) {
+      return {
+        type: 'Döviz Komisyonu',
+        color: 'text-purple-600',
+        sign: '+'
+      };
+    }
+    
     const isDeposit = transaction.transactionType === 1;
     const isWithdraw = transaction.transactionType === 2;
     const isTransfer = transaction.transactionType === 3;
+    const isExchangeBuy = transaction.transactionType === 5;
+    const isExchangeSell = transaction.transactionType === 6;
+    const isExchangeDeposit = transaction.transactionType === 8;
+    const isExchangeWithdraw = transaction.transactionType === 9;
     
     // Transfer işlemleri için doğru kategorilendirme
     let isTransferIn = false;
@@ -190,6 +186,43 @@ const TransactionHistory = () => {
       else if (transaction.targetAccountId === currentAccountId) {
         isTransferIn = true;
       }
+    }
+
+    // Döviz işlemleri için logic
+    if (isExchangeBuy) {
+      // Döviz alış: TRY hesabından çıkış (kırmızı)
+      return {
+        type: 'Döviz Alış',
+        color: 'text-red-600',
+        sign: '-'
+      };
+    }
+    
+    if (isExchangeSell) {
+      // Döviz satış: TRY hesabına giriş (yeşil)
+      return {
+        type: 'Döviz Satış',
+        color: 'text-green-600',
+        sign: '+'
+      };
+    }
+    
+    if (isExchangeDeposit) {
+      // Döviz hesabına para girişi (yeşil)
+      return {
+        type: 'Döviz Girişi',
+        color: 'text-green-600',
+        sign: '+'
+      };
+    }
+    
+    if (isExchangeWithdraw) {
+      // Döviz hesabından para çıkışı (kırmızı)
+      return {
+        type: 'Döviz Çıkışı',
+        color: 'text-red-600',
+        sign: '-'
+      };
     }
 
     return {
@@ -269,7 +302,8 @@ const TransactionHistory = () => {
                       const value = e.target.value;
                       const accountId = value && value !== '' ? parseInt(value) : undefined;
                       console.log('Dropdown onChange:', { value, accountId, selectedAccountId });
-                      handleAccountChange(accountId);
+                      setSelectedAccountId(accountId);
+                      console.log('setSelectedAccountId called with:', accountId);
                     }}
                     className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-bankGradient"
                   >
@@ -404,8 +438,20 @@ const TransactionHistory = () => {
                               </span>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm">
-                              <span className={`font-semibold ${transactionInfo.color}`}>
-                                {transactionInfo.sign}
+                              <span className={`font-semibold ${
+                                (transaction.transactionType === 1) || 
+                                (transaction.transactionType === 3 && transaction.targetAccountId === transaction.accountId) ||
+                                (transaction.transactionType === 4) || // Fee transaction'ları pozitif göster
+                                (transaction.transactionType === 6) || // Döviz Satış pozitif
+                                (transaction.transactionType === 8)    // Döviz Girişi pozitif
+                                    ? 'text-green-600' : 'text-red-600'
+                              }`}>
+                                {(transaction.transactionType === 1) || 
+                                 (transaction.transactionType === 3 && transaction.targetAccountId === transaction.accountId) ||
+                                 (transaction.transactionType === 4) || // Fee transaction'ları pozitif göster
+                                 (transaction.transactionType === 6) || // Döviz Satış pozitif
+                                 (transaction.transactionType === 8)    // Döviz Girişi pozitif
+                                    ? '+' : '-'}
                                 {getCurrencySymbol(account?.currencyType || 0)}
                                 {Math.abs(transaction.amount).toLocaleString('tr-TR', { 
                                   minimumFractionDigits: 2,
@@ -481,13 +527,37 @@ const TransactionHistory = () => {
                   <div>
                     <span className="text-green-700 font-semibold">Transfer (Gelen): </span>
                     <span className="font-bold text-green-800">
-                      {transactions.filter(t => t.transactionType === 3 && t.targetAccountId === selectedAccountId).length}
+                      {transactions.filter(t => t.transactionType === 3 && t.targetAccountId && t.targetAccountId !== t.accountId).length}
                     </span>
                   </div>
                   <div>
                     <span className="text-red-700 font-semibold">Transfer (Giden): </span>
                     <span className="font-bold text-red-800">
-                      {transactions.filter(t => t.transactionType === 3 && t.accountId === selectedAccountId).length}
+                      {transactions.filter(t => t.transactionType === 3 && t.targetAccountId && t.targetAccountId !== t.accountId).length}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-blue-700 font-semibold">Döviz Alış: </span>
+                    <span className="font-bold text-blue-800">
+                      {transactions.filter(t => t.transactionType === 5).length}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-purple-700 font-semibold">Döviz Satış: </span>
+                    <span className="font-bold text-purple-800">
+                      {transactions.filter(t => t.transactionType === 6).length}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-green-700 font-semibold">Döviz Girişi: </span>
+                    <span className="font-bold text-green-800">
+                      {transactions.filter(t => t.transactionType === 8).length}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-red-700 font-semibold">Döviz Çıkışı: </span>
+                    <span className="font-bold text-red-800">
+                      {transactions.filter(t => t.transactionType === 9).length}
                     </span>
                   </div>
                   {user?.roleId === 2 && (

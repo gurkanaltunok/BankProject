@@ -26,7 +26,8 @@ namespace BankProject.DataAccess.Concrete
         {
             return _context.Transactions
                            .Include(t => t.ExchangeRate)
-                           .Where(t => t.AccountId == accountId || t.TargetAccountId == accountId)
+                           .Where(t => t.AccountId == accountId || 
+                                      (t.TargetAccountId == accountId && t.TransactionType == 3)) // Transfer işlemleri için TargetAccountId kontrolü
                            .OrderByDescending(t => t.TransactionDate)
                            .ToList();
         }

@@ -59,31 +59,13 @@ namespace BankProject.Business.Concrete
 
             try
             {
-                var response = await _httpClient.GetStringAsync("https://api.exchangerate-api.com/v4/latest/TRY");
-                var jsonDoc = JsonDocument.Parse(response);
-                
-                if (jsonDoc.RootElement.TryGetProperty("rates", out var ratesElement))
-                {
-                    if (fromCurrency == "TRY")
-                    {
-                        var toRate = ratesElement.GetProperty(toCurrency).GetDecimal();
-                        rate = 1.0m / toRate;
-                    }
-                    else if (toCurrency == "TRY")
-                    {
-                        var fromRate = ratesElement.GetProperty(fromCurrency).GetDecimal();
-                        rate = 1.0m / fromRate;
-                    }
-                }
+                rate = _exchangeRateService.ConvertCurrency(1.0m, fromCurrency, toCurrency);
 
-                // ExchangeRate tablosuna kaydet
                 var exchangeRate = new ExchangeRate
                 {
-                    FromCurrency = fromCurrency,
-                    ToCurrency = toCurrency,
+                    Currency = fromCurrency,
                     Rate = rate,
-                    Date = DateTime.UtcNow,
-                    Source = "exchangerate-api.com"
+                    Date = DateTime.UtcNow
                 };
 
                 var savedExchangeRate = _exchangeRateRepository.AddExchangeRate(exchangeRate);
@@ -95,32 +77,7 @@ namespace BankProject.Business.Concrete
             {
                 Console.WriteLine($"Exchange rate API error: {ex.Message}");
                 
-                // Fallback rates
-                var fallbackRates = new Dictionary<string, decimal>
-                {
-                    { "TRY", 1.0m },
-                    { "USD", 41.32m },
-                    { "EUR", 44.85m },
-                    { "GBP", 52.48m }
-                };
-
-                if (fallbackRates.ContainsKey(fromCurrency) && fallbackRates.ContainsKey(toCurrency))
-                {
-                    rate = fallbackRates[toCurrency] / fallbackRates[fromCurrency];
-                }
-
-                // Fallback rate'i de kaydet
-                var fallbackExchangeRate = new ExchangeRate
-                {
-                    FromCurrency = fromCurrency,
-                    ToCurrency = toCurrency,
-                    Rate = rate,
-                    Date = DateTime.UtcNow,
-                    Source = "fallback"
-                };
-
-                var savedFallbackRate = _exchangeRateRepository.AddExchangeRate(fallbackExchangeRate);
-                exchangeRateId = savedFallbackRate.ExchangeRateId;
+                throw new Exception($"Frankfurter API erişilemiyor. {fromCurrency} -> {toCurrency} dönüşümü yapılamıyor.");
             }
 
             return (rate, exchangeRateId);
@@ -145,7 +102,6 @@ namespace BankProject.Business.Concrete
             return _transactionRepository.AddTransaction(transaction);
         }
 
-        // Deposit - No Fee
         public TransactionDTO Deposit(int accountId, decimal amount, string description)
         {
             var account = GetActiveAccount(accountId);
@@ -155,7 +111,6 @@ namespace BankProject.Business.Concrete
 
             var transaction = AddTransaction(accountId, null, amount, 0, (int)TransactionType.Deposit, description, account.Balance);
             
-            // Bakiye geçmişini kaydet
             _balanceHistoryService.RecordBalanceChange(accountId, previousBalance, account.Balance, amount, "Deposit", description, transaction.TransactionId);
             return new TransactionDTO
             {
@@ -171,7 +126,6 @@ namespace BankProject.Business.Concrete
             };
         }
 
-        // Withdraw - Fee %0.5
         public TransactionDTO Withdraw(int accountId, decimal amount, string description)
         {
             var account = GetActiveAccount(accountId);
@@ -186,7 +140,6 @@ namespace BankProject.Business.Concrete
             var previousBalance = account.Balance;
             var bankPreviousBalance = bank.Balance;
             
-            // Fee'yi TL'ye çevir (eğer hesap TL değilse)
             decimal feeInTRY = fee;
             int? exchangeRateId = null;
             if (account.CurrencyType != CurrencyType.TRY)
@@ -207,7 +160,6 @@ namespace BankProject.Business.Concrete
             var withdrawTransaction = AddTransaction(accountId, null, amount, fee, (int)TransactionType.Withdraw, description, account.Balance, feeInTRY, exchangeRateId);
             var feeTransaction = AddTransaction(bank.AccountId, accountId, feeInTRY, 0, (int)TransactionType.Fee, $"İşlem Ücreti - Hesap {accountId}", bank.Balance);
             
-            // Bakiye geçmişini kaydet
             _balanceHistoryService.RecordBalanceChange(accountId, previousBalance, account.Balance, -totalDebit, "Withdraw", description, withdrawTransaction.TransactionId);
             _balanceHistoryService.RecordBalanceChange(bank.AccountId, bankPreviousBalance, bank.Balance, feeInTRY, "Fee", $"İşlem Ücreti - Hesap {accountId}", feeTransaction.TransactionId);
 
@@ -225,14 +177,12 @@ namespace BankProject.Business.Concrete
             };
         }
 
-        // Transfer - Fee %0.5
         public TransactionDTO Transfer(int fromAccountId, int toAccountId, decimal amount, string description)
         {
             var fromAccount = GetActiveAccount(fromAccountId);
             var toAccount = GetActiveAccount(toAccountId);
             var bank = GetBankAccount();
 
-            // Currency type kontrolü - aynı para biriminde olmalı
             Console.WriteLine($"DEBUG: FromAccount CurrencyType: {fromAccount.CurrencyType}, ToAccount CurrencyType: {toAccount.CurrencyType}");
             if (fromAccount.CurrencyType != toAccount.CurrencyType)
                 throw new Exception($"Farklı para birimlerinden transfer yapılamaz. Gönderen hesap: {fromAccount.CurrencyType}, Alıcı hesap: {toAccount.CurrencyType}");
@@ -243,7 +193,6 @@ namespace BankProject.Business.Concrete
             if (fromAccount.Balance < totalDebit)
                 throw new Exception("Yetersiz bakiye.");
 
-            // Fee'yi TL'ye çevir (eğer hesap TL değilse)
             decimal feeInTRY = fee;
             int? exchangeRateId = null;
             if (fromAccount.CurrencyType != CurrencyType.TRY)
@@ -265,7 +214,6 @@ namespace BankProject.Business.Concrete
 
             var createdTransaction = AddTransaction(fromAccountId, toAccountId, amount, fee, (int)TransactionType.Transfer, description, fromAccount.Balance, feeInTRY, exchangeRateId);
 
-            // Banka için fee transaction
             AddTransaction(bank.AccountId, fromAccountId, feeInTRY, 0, (int)TransactionType.Fee, $"İşlem Ücreti - Hesap {fromAccountId}", bank.Balance);
 
             return new TransactionDTO
@@ -285,10 +233,18 @@ namespace BankProject.Business.Concrete
 
 
         public List<Transaction> GetTransactionsByAccountId(int accountId)
-            => _transactionRepository.GetTransactionsByAccountId(accountId);
+        {
+            var transactions = _transactionRepository.GetTransactionsByAccountId(accountId);
+            // type 7 - ExchangeCommission
+            return transactions.Where(t => t.TransactionType != 7).ToList();
+        }
 
         public List<Transaction> GetTransactionsByDateRange(DateTime? startDate, DateTime? endDate, int? accountId, int? userId = null)
-            => _transactionRepository.GetTransactionsByDateRange(startDate, endDate, accountId, userId);
+        {
+            var transactions = _transactionRepository.GetTransactionsByDateRange(startDate, endDate, accountId, userId);
+            // type 7 - ExchangeCommission
+            return transactions.Where(t => t.TransactionType != 7).ToList();
+        }
 
         public bool CheckAccountOwner(int accountId, int userId)
         {
@@ -296,6 +252,157 @@ namespace BankProject.Business.Concrete
             if (account == null)
                 throw new Exception("Hesap bulunamadı.");
             return account.UserId == userId;
+        }
+
+        public async Task<Transaction> ExchangeBuyAsync(ExchangeBuyDTO dto)
+        {
+            var tryAccount = GetActiveAccount(dto.FromAccountId);
+            if (tryAccount.CurrencyType != CurrencyType.TRY)
+                throw new Exception("Kaynak hesap TRY hesabı olmalıdır.");
+
+            var exchangeAccount = GetActiveAccount(dto.ToAccountId);
+            if (exchangeAccount.CurrencyType == CurrencyType.TRY)
+                throw new Exception("Hedef hesap döviz hesabı olmalıdır.");
+
+            if (tryAccount.UserId != exchangeAccount.UserId)
+                throw new Exception("Hesaplar aynı kullanıcıya ait olmalıdır.");
+
+            if (tryAccount.Balance < dto.AmountTRY)
+                throw new Exception("TRY hesabında yeterli bakiye bulunmuyor.");
+
+            var commission = dto.AmountTRY * 0.005m;
+            var totalAmount = dto.AmountTRY + commission;
+
+            if (tryAccount.Balance < totalAmount)
+                throw new Exception($"TRY hesabında yeterli bakiye bulunmuyor. Gerekli tutar: {totalAmount:F2} TRY (İşlem: {dto.AmountTRY:F2} TRY + Komisyon: {commission:F2} TRY)");
+
+            var bankAccount = GetBankAccount();
+
+            tryAccount.Balance -= totalAmount;
+            _accountRepository.UpdateAccount(tryAccount);
+
+            exchangeAccount.Balance += dto.AmountForeign;
+            _accountRepository.UpdateAccount(exchangeAccount);
+
+            bankAccount.Balance += commission;
+            _accountRepository.UpdateAccount(bankAccount);
+
+            var exchangeRate = new ExchangeRate
+            {
+                Currency = GetCurrencyString(exchangeAccount.CurrencyType),
+                Rate = dto.Rate,
+                Date = DateTime.UtcNow
+            };
+            var savedExchangeRate = _exchangeRateRepository.AddExchangeRate(exchangeRate);
+
+            var tryTransaction = new Transaction
+            {
+                AccountId = dto.FromAccountId,
+                TargetAccountId = dto.ToAccountId,
+                Amount = -totalAmount,
+                BalanceAfter = tryAccount.Balance,
+                TransactionType = (int)TransactionType.ExchangeBuy,
+                Description = $"Döviz Alış - {GetCurrencyString(exchangeAccount.CurrencyType)} ({dto.AmountForeign:F2}) - Komisyon: {commission:F2} TRY",
+                TransactionDate = DateTime.UtcNow,
+                ExchangeRateId = savedExchangeRate.ExchangeRateId,
+                Fee = commission,
+                FeeInTRY = commission
+            };
+            _transactionRepository.AddTransaction(tryTransaction);
+
+            var exchangeTransaction = new Transaction
+            {
+                AccountId = dto.ToAccountId,
+                TargetAccountId = dto.FromAccountId,
+                Amount = dto.AmountForeign,
+                BalanceAfter = exchangeAccount.Balance,
+                TransactionType = (int)TransactionType.ExchangeDeposit,
+                Description = $"Döviz Alış - TRY ({dto.AmountTRY:F2}) - Kur: {dto.Rate:F4}",
+                TransactionDate = DateTime.UtcNow,
+                ExchangeRateId = savedExchangeRate.ExchangeRateId,
+                Fee = 0,
+                FeeInTRY = 0
+            };
+            _transactionRepository.AddTransaction(exchangeTransaction);
+
+            _balanceHistoryService.RecordBalanceChange(dto.FromAccountId, tryAccount.Balance + totalAmount, tryAccount.Balance, -totalAmount, "Döviz Alış - TRY Çıkış", "Döviz Alış - TRY Çıkış", tryTransaction.TransactionId);
+            _balanceHistoryService.RecordBalanceChange(dto.ToAccountId, exchangeAccount.Balance - dto.AmountForeign, exchangeAccount.Balance, dto.AmountForeign, "Döviz Alış - Döviz Giriş", "Döviz Alış - Döviz Giriş", exchangeTransaction.TransactionId);
+
+            return tryTransaction;
+        }
+
+        public async Task<Transaction> ExchangeSellAsync(ExchangeSellDTO dto)
+        {
+            var exchangeAccount = GetActiveAccount(dto.FromAccountId);
+            if (exchangeAccount.CurrencyType == CurrencyType.TRY)
+                throw new Exception("Kaynak hesap döviz hesabı olmalıdır.");
+
+            var tryAccount = GetActiveAccount(dto.ToAccountId);
+            if (tryAccount.CurrencyType != CurrencyType.TRY)
+                throw new Exception("Hedef hesap TRY hesabı olmalıdır.");
+
+            if (exchangeAccount.UserId != tryAccount.UserId)
+                throw new Exception("Hesaplar aynı kullanıcıya ait olmalıdır.");
+
+            if (exchangeAccount.Balance < dto.AmountForeign)
+                throw new Exception("Döviz hesabında yeterli bakiye bulunmuyor.");
+
+            var commission = dto.AmountTRY * 0.005m;
+            var netAmount = dto.AmountTRY - commission;
+
+            var bankAccount = GetBankAccount();
+
+            exchangeAccount.Balance -= dto.AmountForeign;
+            _accountRepository.UpdateAccount(exchangeAccount);
+
+            tryAccount.Balance += netAmount;
+            _accountRepository.UpdateAccount(tryAccount);
+
+            bankAccount.Balance += commission;
+            _accountRepository.UpdateAccount(bankAccount);
+
+            var exchangeRate = new ExchangeRate
+            {
+                Currency = GetCurrencyString(exchangeAccount.CurrencyType),
+                Rate = dto.Rate,
+                Date = DateTime.UtcNow
+            };
+            var savedExchangeRate = _exchangeRateRepository.AddExchangeRate(exchangeRate);
+
+            var exchangeTransaction = new Transaction
+            {
+                AccountId = dto.FromAccountId,
+                TargetAccountId = dto.ToAccountId,
+                Amount = -dto.AmountForeign,
+                BalanceAfter = exchangeAccount.Balance,
+                TransactionType = (int)TransactionType.ExchangeWithdraw,
+                Description = $"Döviz Satış - TRY ({dto.AmountTRY:F2}) - Kur: {dto.Rate:F4}",
+                TransactionDate = DateTime.UtcNow,
+                ExchangeRateId = savedExchangeRate.ExchangeRateId,
+                Fee = 0,
+                FeeInTRY = 0
+            };
+            _transactionRepository.AddTransaction(exchangeTransaction);
+
+            var tryTransaction = new Transaction
+            {
+                AccountId = dto.ToAccountId,
+                TargetAccountId = dto.FromAccountId,
+                Amount = netAmount,
+                BalanceAfter = tryAccount.Balance,
+                TransactionType = (int)TransactionType.ExchangeSell,
+                Description = $"Döviz Satış - {GetCurrencyString(exchangeAccount.CurrencyType)} ({dto.AmountForeign:F2}) - Komisyon: {commission:F2} TRY",
+                TransactionDate = DateTime.UtcNow,
+                ExchangeRateId = savedExchangeRate.ExchangeRateId,
+                Fee = commission,
+                FeeInTRY = commission
+            };
+            _transactionRepository.AddTransaction(tryTransaction);
+
+            _balanceHistoryService.RecordBalanceChange(dto.FromAccountId, exchangeAccount.Balance + dto.AmountForeign, exchangeAccount.Balance, -dto.AmountForeign, "Döviz Satış - Döviz Çıkış", "Döviz Satış - Döviz Çıkış", exchangeTransaction.TransactionId);
+            _balanceHistoryService.RecordBalanceChange(dto.ToAccountId, tryAccount.Balance - netAmount, tryAccount.Balance, netAmount, "Döviz Satış - TRY Giriş", "Döviz Satış - TRY Giriş", tryTransaction.TransactionId);
+
+            return tryTransaction;
         }
     }
 }

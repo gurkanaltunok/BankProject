@@ -27,13 +27,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is logged in on app start
     const checkAuth = async () => {
       const userId = apiService.getCurrentUserId();
       const roleId = localStorage.getItem('roleId');
       
       if (userId && roleId && apiService.isAuthenticated()) {
-        // Validate token with server
         const isValid = await apiService.validateToken();
         if (isValid) {
           setUser({
@@ -41,7 +39,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             roleId: parseInt(roleId),
           });
         } else {
-          // Token is invalid, clear user data
           setUser(null);
         }
       }
@@ -56,10 +53,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(true);
       const authResponse: AuthResponse = await apiService.login({ TCKN: tckn, Password: password });
       
-      // Token'ın localStorage'a kaydedilmesini bekle
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      // Kullanıcı bilgilerini çek
       try {
         const userInfo = await apiService.getCurrentUser();
         setUser({
@@ -71,7 +66,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
       } catch (userError) {
         console.error('getCurrentUser error:', userError);
-        // getCurrentUser başarısız olsa bile login başarılı, sadece temel bilgileri kullan
         setUser({
           id: authResponse.UserId,
           roleId: authResponse.RoleId,
@@ -88,7 +82,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setLoading(true);
       await apiService.register(userData);
-      // After successful registration, user needs to login
     } catch (error) {
       throw error;
     } finally {
@@ -110,7 +103,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isAuthenticated: !!user,
   };
 
-  // Debug log
   console.log('AuthContext - user:', user, 'isAuthenticated:', !!user, 'loading:', loading);
 
   return (

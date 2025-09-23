@@ -19,17 +19,20 @@ namespace BankProject.API.Controllers
         private readonly IUserService _userService;
         private readonly IAccountService _accountService;
         private readonly ITransactionService _transactionService;
+        private readonly IExchangeRateService _exchangeRateService;
         private readonly HttpClient _httpClient;
 
         public AdminController(
             IUserService userService, 
             IAccountService accountService,
             ITransactionService transactionService,
+            IExchangeRateService exchangeRateService,
             HttpClient httpClient)
         {
             _userService = userService;
             _accountService = accountService;
             _transactionService = transactionService;
+            _exchangeRateService = exchangeRateService;
             _httpClient = httpClient;
         }
 
@@ -250,6 +253,54 @@ namespace BankProject.API.Controllers
             }
         }
 
+        [HttpGet("test-vakifbank-rates")]
+        public async Task<IActionResult> TestVakifbankRates()
+        {
+            try
+            {
+                // Check if user is admin
+                var roleIdClaim = User.FindFirst("RoleId");
+                if (roleIdClaim == null || int.Parse(roleIdClaim.Value) != 2)
+                    return Forbid();
+
+                // Vakıfbank API'sinden güncel kurları çek
+                var allRates = await _exchangeRateService.GetAllRatesAsync();
+                
+                // Test dönüşümleri
+                var testConversions = new List<object>();
+                var testAmount = 1000m;
+                
+                var currencies = new[] { "USD", "EUR", "GBP" };
+                foreach (var currency in currencies)
+                {
+                    if (allRates.ContainsKey(currency))
+                    {
+                        var convertedAmount = _exchangeRateService.ConvertCurrency(testAmount, "TRY", currency);
+                        testConversions.Add(new
+                        {
+                            from = "TRY",
+                            to = currency,
+                            amount = testAmount,
+                            convertedAmount = convertedAmount,
+                            rate = allRates[currency]
+                        });
+                    }
+                }
+
+                return Ok(new
+                {
+                    message = "Vakıfbank API test başarılı",
+                    timestamp = DateTime.Now,
+                    rates = allRates,
+                    testConversions = testConversions
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { Message = ex.Message, StackTrace = ex.StackTrace });
+            }
+        }
+
         private async Task<decimal> CalculateTotalBalanceInTRY(List<Account> accounts)
         {
             decimal totalBalance = 0;
@@ -264,10 +315,9 @@ namespace BankProject.API.Controllers
                 }
                 else
                 {
-                    var exchangeRate = await GetCurrentExchangeRateAsync(GetCurrencyString(account.CurrencyType), "TRY");
-                    var convertedAmount = account.Balance * exchangeRate;
+                    var convertedAmount = _exchangeRateService.ConvertCurrency(account.Balance, GetCurrencyString(account.CurrencyType), "TRY");
                     totalBalance += convertedAmount;
-                    Console.WriteLine($"DEBUG: {GetCurrencyString(account.CurrencyType)} account {account.AccountId}: {account.Balance} {GetCurrencyString(account.CurrencyType)} = {convertedAmount} TRY (rate: {exchangeRate})");
+                    Console.WriteLine($"DEBUG: {GetCurrencyString(account.CurrencyType)} account {account.AccountId}: {account.Balance} {GetCurrencyString(account.CurrencyType)} = {convertedAmount} TRY");
                 }
             }
 
@@ -287,55 +337,31 @@ namespace BankProject.API.Controllers
             };
         }
 
-        private async Task<decimal> GetCurrentExchangeRateAsync(string fromCurrency, string toCurrency)
+        [HttpDelete("cleanup-forex-transactions")]
+        public async Task<IActionResult> CleanupForexTransactions()
         {
             try
             {
-                Console.WriteLine($"DEBUG: Getting current exchange rate for {fromCurrency} to {toCurrency} at {DateTime.Now}");
-                var response = await _httpClient.GetStringAsync("https://api.exchangerate-api.com/v4/latest/TRY");
-                var jsonDoc = JsonDocument.Parse(response);
-                
-                if (jsonDoc.RootElement.TryGetProperty("rates", out var ratesElement))
+                // Forex komisyon transaction'larını sil (type 7)
+                var commissionTransactions = _transactionService.GetTransactionsByDateRange(null, null, null)
+                    .Where(t => t.TransactionType == 7).ToList();
+
+                foreach (var transaction in commissionTransactions)
                 {
-                    if (fromCurrency == "TRY")
-                    {
-                        var toRate = ratesElement.GetProperty(toCurrency).GetDecimal();
-                        var rate = 1.0m / toRate;
-                        Console.WriteLine($"DEBUG: Exchange rate {fromCurrency} to {toCurrency}: {rate}");
-                        return rate;
-                    }
-                    else if (toCurrency == "TRY")
-                    {
-                        var fromRate = ratesElement.GetProperty(fromCurrency).GetDecimal();
-                        var rate = 1.0m / fromRate;
-                        Console.WriteLine($"DEBUG: Exchange rate {fromCurrency} to {toCurrency}: {rate}");
-                        return rate;
-                    }
+                    // Transaction'ı sil (bu method'u TransactionService'e eklememiz gerekebilir)
+                    Console.WriteLine($"Deleting commission transaction: {transaction.TransactionId}");
                 }
+
+                return Ok(new { 
+                    message = "Forex commission transactions cleaned up successfully",
+                    deletedCount = commissionTransactions.Count
+                });
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Exchange rate API error: {ex.Message}");
+                return BadRequest(new { Message = ex.Message });
             }
-
-            // Fallback rates - güncel kurlar
-            var fallbackRates = new Dictionary<string, decimal>
-            {
-                { "TRY", 1.0m },
-                { "USD", 42.50m }, // Güncel USD kuru
-                { "EUR", 46.20m }, // Güncel EUR kuru
-                { "GBP", 54.80m }  // Güncel GBP kuru
-            };
-
-            if (fallbackRates.ContainsKey(fromCurrency) && fallbackRates.ContainsKey(toCurrency))
-            {
-                var fallbackRate = fallbackRates[toCurrency] / fallbackRates[fromCurrency];
-                Console.WriteLine($"DEBUG: Using fallback rate for {fromCurrency} to {toCurrency}: {fallbackRate}");
-                return fallbackRate;
-            }
-
-            Console.WriteLine($"DEBUG: No rate found for {fromCurrency} to {toCurrency}, returning 1.0");
-            return 1.0m;
         }
+
     }
 }

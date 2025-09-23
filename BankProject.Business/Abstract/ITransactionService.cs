@@ -13,5 +13,7 @@ namespace BankProject.Business.Abstract
         List<Transaction> GetTransactionsByAccountId(int accountId);
         List<Transaction> GetTransactionsByDateRange(DateTime? startDate, DateTime? endDate, int? accountId, int? userId = null);
         bool CheckAccountOwner(int accountId, int userId);
+        Task<Transaction> ExchangeBuyAsync(ExchangeBuyDTO dto);
+        Task<Transaction> ExchangeSellAsync(ExchangeSellDTO dto);
     }
 }

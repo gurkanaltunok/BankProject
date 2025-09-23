@@ -10,21 +10,14 @@ namespace BankProject.Entities
         public int ExchangeRateId { get; set; }
 
         [Required, MaxLength(3)]
-        public string FromCurrency { get; set; } = string.Empty; // USD, EUR, GBP
-
-        [Required, MaxLength(3)]
-        public string ToCurrency { get; set; } = string.Empty; // TRY
+        public string Currency { get; set; } = string.Empty; // USD, EUR, GBP
 
         [Required, Precision(18, 6)]
-        public decimal Rate { get; set; }
+        public decimal Rate { get; set; } // 1 Currency = Rate TRY
 
         [Required]
         public DateTime Date { get; set; } = DateTime.UtcNow;
 
-        [MaxLength(500)]
-        public string? Source { get; set; } // API kaynağı
-
-        // Navigation property
-        public ICollection<Transaction> Transactions { get; set; } = new List<Transaction>();
+        // Navigation property removed to prevent circular reference
     }
 }

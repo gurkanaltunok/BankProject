@@ -20,6 +20,11 @@ export const sidebarLinks = [
     label: "Para Transferi",
   },
   {
+    imgURL: "/icons/dollar-circle.svg",
+    route: "/exchange-trading",
+    label: "Döviz Alım Satım",
+  },
+  {
     imgURL: "/icons/edit.svg",
     route: "/profile",
     label: "Profilim",

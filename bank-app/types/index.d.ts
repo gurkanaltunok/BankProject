@@ -48,7 +48,6 @@ declare type User = {
   surname?: string;
   email?: string;
   roleId: number;
-  // Legacy fields for compatibility
   $id?: string;
   userId?: string;
   dwollaCustomerUrl?: string;
@@ -71,7 +70,6 @@ declare type NewUserParams = {
 };
 
 declare type Account = {
-  // Primary fields (API format)
   AccountId?: number;
   UserId?: number;
   CurrencyType?: number; // 0: TRY, 1: USD, 2: EUR
@@ -80,7 +78,6 @@ declare type Account = {
   IBAN?: string;
   DateCreated?: string;
   IsActive?: boolean;
-  // Legacy compatibility fields (camelCase)
   id?: number;
   userId?: number;
   currencyType?: number;
@@ -109,7 +106,6 @@ declare type Transaction = {
   Description: string;
   TransactionDate: string;
   BalanceAfter: number;
-  // Legacy compatibility fields
   id?: number;
   accountId?: number;
   transactionType?: number;
@@ -139,7 +135,6 @@ declare type Bank = {
   fundingSourceUrl?: string;
   userId?: number;
   sharableId?: string;
-  // Account compatibility fields
   id?: number;
   currencyType?: number;
   accountType?: number;
@@ -239,15 +234,6 @@ declare interface PlaidLinkProps {
   dwollaCustomerId?: string;
 }
 
-// declare type User = sdk.Models.Document & {
-//   accountId: string;
-//   email: string;
-//   name: string;
-//   items: string[];
-//   accessToken: string;
-//   image: string;
-// };
-
 declare interface AuthFormProps {
   type: "sign-in" | "sign-up";
 }
@@ -315,7 +301,6 @@ declare interface PaymentTransferFormProps {
   accounts: Account[];
 }
 
-// Actions
 declare interface getAccountsProps {
   userId: string;
 }
@@ -333,10 +318,10 @@ declare interface getTransactionsProps {
 }
 
 declare interface CreateFundingSourceOptions {
-  customerId: string; // Dwolla Customer ID
-  fundingSourceName: string; // Dwolla Funding Source Name
-  plaidToken: string; // Plaid Account Processor Token
-  _links: object; // Dwolla On Demand Authorization Link
+  customerId: string;
+  fundingSourceName: string;
+  plaidToken: string;
+  _links: object;
 }
 
 declare interface CreateTransactionProps {

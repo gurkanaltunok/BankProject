@@ -15,28 +15,45 @@ const ExchangeRatesWidget = () => {
   const [rates, setRates] = useState<ExchangeRate[]>([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [previousRates, setPreviousRates] = useState<{[key: string]: number}>({});
 
   const fetchExchangeRates = async () => {
     try {
       setLoading(true);
+      setError(null);
       
-      // döviz kurları API
-      const response = await fetch('https://api.exchangerate-api.com/v4/latest/TRY');
+      // Backend API'mizden döviz kurlarını ve günlük değişimi çek
+      const response = await fetch('http://localhost:5020/api/Test/exchange-rates-with-change');
       
       if (!response.ok) {
-        throw new Error('Failed to fetch exchange rates');
+        throw new Error(`API Hatası: ${response.status} ${response.statusText}`);
       }
       
       const data = await response.json();
       
-      const currencies = ['USD', 'EUR', 'GBP', 'JPY', 'CHF', 'CAD'];
+      // API'den gelen kurları kontrol et
+      if (!data.rates || Object.keys(data.rates).length === 0) {
+        throw new Error('Frankfurter API çalışmıyor. Kurlar alınamadı.');
+      }
+      
+      // Backend'den gelen kurları kullan
+      const currencies = ['USD', 'EUR', 'GBP'];
       const newRates: ExchangeRate[] = currencies.map(currency => {
-        const rate = 1 / data.rates[currency];
-        const buy = rate * 0.995;
-        const sell = rate * 1.005;
-        const change = (Math.random() - 0.5) * 0.5;
-        const changePercent = (change / rate) * 100;
-        
+        const currentRate = data.rates[currency];
+        if (!currentRate) {
+          throw new Error(`${currency} kuru alınamadı.`);
+        }
+
+        // %0.5 spread ekle (alış ve satış farkı)
+        const spread = 0.005; // %0.5
+        const buy = currentRate * (1 - spread); // Alış kuru (düşük)
+        const sell = currentRate * (1 + spread); // Satış kuru (yüksek)
+
+        // Backend'den gelen gerçek yüzde değişimi kullan
+        const changePercent = data.rates[`${currency}_CHANGE`] || 0;
+        const change = (currentRate * changePercent) / 100;
+
         return {
           currency,
           symbol: getCurrencySymbol(currency),
@@ -46,65 +63,13 @@ const ExchangeRatesWidget = () => {
           changePercent: Number(changePercent.toFixed(2))
         };
       });
-      
+
       setRates(newRates);
       setLastUpdate(new Date());
     } catch (error) {
       console.error('Error fetching exchange rates:', error);
-      
-      const mockRates: ExchangeRate[] = [
-        {
-          currency: 'USD',
-          symbol: '$',
-          buy: 34.25,
-          sell: 34.35,
-          change: 0.15,
-          changePercent: 0.44
-        },
-        {
-          currency: 'EUR',
-          symbol: '€',
-          buy: 37.12,
-          sell: 37.25,
-          change: -0.08,
-          changePercent: -0.21
-        },
-        {
-          currency: 'GBP',
-          symbol: '£',
-          buy: 43.45,
-          sell: 43.65,
-          change: 0.22,
-          changePercent: 0.51
-        },
-        {
-          currency: 'JPY',
-          symbol: '¥',
-          buy: 0.23,
-          sell: 0.24,
-          change: 0.001,
-          changePercent: 0.42
-        },
-        {
-          currency: 'CHF',
-          symbol: 'CHF',
-          buy: 38.95,
-          sell: 39.15,
-          change: -0.12,
-          changePercent: -0.31
-        },
-        {
-          currency: 'CAD',
-          symbol: 'C$',
-          buy: 25.15,
-          sell: 25.35,
-          change: 0.05,
-          changePercent: 0.20
-        }
-      ];
-      
-      setRates(mockRates);
-      setLastUpdate(new Date());
+      setError(error instanceof Error ? error.message : 'Bilinmeyen hata oluştu');
+      setRates([]); // Kurları temizle
     } finally {
       setLoading(false);
     }
@@ -168,7 +133,7 @@ const ExchangeRatesWidget = () => {
       <div className="p-6">
         {loading ? (
           <div className="space-y-4">
-            {[...Array(6)].map((_, index) => (
+            {[...Array(3)].map((_, index) => (
               <div key={index} className="animate-pulse">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
@@ -182,6 +147,22 @@ const ExchangeRatesWidget = () => {
                 </div>
               </div>
             ))}
+          </div>
+        ) : error ? (
+          <div className="text-center py-8">
+            <div className="w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
+              <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 19.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Döviz Kurları Alınamadı</h3>
+            <p className="text-sm text-gray-600 mb-4">{error}</p>
+            <button
+              onClick={fetchExchangeRates}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            >
+              Tekrar Dene
+            </button>
           </div>
         ) : (
           <div className="space-y-4">

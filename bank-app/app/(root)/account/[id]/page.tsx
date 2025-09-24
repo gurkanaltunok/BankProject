@@ -10,6 +10,8 @@ import { getAccountTypeLabel, getCurrencyTypeLabel, getCurrencySymbol } from '@/
 import HeaderBox from '@/components/HeaderBox';
 import BalanceHistoryChart from '@/components/BalanceHistoryChart';
 import { formatAmount } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft } from 'lucide-react';
 
 interface Transaction {
   id: number;
@@ -37,6 +39,10 @@ const AccountDetail = () => {
   const router = useRouter();
   const params = useParams();
   const accountId = params.id as string;
+
+  const handleGoBack = () => {
+    router.back();
+  };
 
   const [selectedAccount, setSelectedAccount] = useState<any>(null);
   const { balanceHistory, loading: balanceHistoryLoading } = useBalanceHistory(selectedAccount?.id);
@@ -71,13 +77,9 @@ const AccountDetail = () => {
       
       let filtered = transactions.filter(t => {
         const isAccountTransaction = (t.accountId === Number(selectedAccount.id) || t.targetAccountId === Number(selectedAccount.id));
-        
-        // Admin kullanıcıları fee transaction'larını görebilir, normal kullanıcılar göremez
-        if (user?.roleId === 2) {
-          return isAccountTransaction; // Admin: tüm transaction'ları göster
-        } else {
-          return isAccountTransaction && t.transactionType !== 4; // Normal kullanıcı: fee transaction'larını gizle
-        }
+        if (user?.roleId === 2) return isAccountTransaction; // Admin: tüm işlemler
+        // Kullanıcı: fee (4) ve exchange commission (7) gizle
+        return isAccountTransaction && t.transactionType !== 4 && t.transactionType !== 7;
       });
 
       const now = new Date();
@@ -157,9 +159,21 @@ const AccountDetail = () => {
     <section className="home">
       <div className="home-content">
         <header className="home-header">
+          <div className="flex items-center gap-4 mb-4">
+            <Button
+              onClick={handleGoBack}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Geri
+            </Button>
+            <h1 className="text-3xl font-bold text-gray-900">Hesap Detayı</h1>
+          </div>
           <HeaderBox 
             type="greeting"
-            title="Hesap Detayı"
+            title=""
             user={selectedAccount.iban || 'Hesap'}
             subtext="Hesap bilgileri ve işlem geçmişi"
           />
@@ -350,8 +364,12 @@ const AccountDetail = () => {
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {transaction.fee ? (
-                            <div className="space-y-1">
+                          {(() => {
+                            // Gelen transferlerde fee gösterme
+                            const isIncomingTransfer = transaction.transactionType === 3 && transaction.targetAccountId === selectedAccount?.id;
+                            if (isIncomingTransfer) return '-';
+                            if (!transaction.fee || transaction.fee === 0) return '-';
+                            return (
                               <div>
                                 {getCurrencySymbol(selectedAccount.currencyType || 0)}
                                 {transaction.fee.toLocaleString('tr-TR', { 
@@ -359,21 +377,8 @@ const AccountDetail = () => {
                                   maximumFractionDigits: 2
                                 })}
                               </div>
-                              {transaction.feeInTRY && transaction.feeInTRY !== transaction.fee && (
-                                <div className="text-xs text-gray-500">
-                                  (₺{transaction.feeInTRY.toLocaleString('tr-TR', { 
-                                    minimumFractionDigits: 2,
-                                    maximumFractionDigits: 2
-                                  })})
-                                </div>
-                              )}
-                              {transaction.exchangeRate && (
-                                <div className="text-xs text-blue-600">
-                                  Kur: {transaction.exchangeRate.rate.toFixed(4)}
-                                </div>
-                              )}
-                            </div>
-                          ) : '-'}
+                            );
+                          })()}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                           {getCurrencySymbol(selectedAccount.currencyType || 0)}

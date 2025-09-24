@@ -158,7 +158,8 @@ namespace BankProject.API.Controllers
                     return Forbid();
 
                 var dailyVolumes = new List<object>();
-                var today = DateTime.Today;
+                // UTC tarih sınırları kullan (işlemler UTC olarak kaydediliyor)
+                var today = DateTime.UtcNow.Date;
 
                 for (int i = 6; i >= 0; i--)
                 {
@@ -172,8 +173,15 @@ namespace BankProject.API.Controllers
                         null // Tüm hesaplar
                     );
 
+                    // İşlem hacmine döviz işlemlerini de dahil et
                     var dailyVolume = dayTransactions
-                        .Where(t => t.TransactionType == 1 || t.TransactionType == 2 || t.TransactionType == 3) // Para çekme, transfer, yatırma
+                        .Where(t => t.TransactionType == (int)TransactionType.Deposit 
+                                 || t.TransactionType == (int)TransactionType.Withdraw 
+                                 || t.TransactionType == (int)TransactionType.Transfer
+                                 || t.TransactionType == (int)TransactionType.ExchangeBuy
+                                 || t.TransactionType == (int)TransactionType.ExchangeSell
+                                 || t.TransactionType == (int)TransactionType.ExchangeDeposit
+                                 || t.TransactionType == (int)TransactionType.ExchangeWithdraw)
                         .Sum(t => Math.Abs(t.Amount));
 
                     dailyVolumes.Add(new
@@ -202,7 +210,8 @@ namespace BankProject.API.Controllers
                     return Forbid();
 
                 var dailyCommissions = new List<object>();
-                var today = DateTime.Today;
+                // UTC tarih sınırları kullan (işlemler UTC olarak kaydediliyor)
+                var today = DateTime.UtcNow.Date;
 
                 for (int i = 6; i >= 0; i--)
                 {
@@ -216,9 +225,10 @@ namespace BankProject.API.Controllers
                         null // Tüm hesaplar
                     );
 
+                    // Komisyon geliri: banka hesabına (AccountId=1) yazılan Fee (type 4) işlem tutarlarının toplamı
                     var dailyCommission = dayTransactions
-                        .Where(t => t.TransactionType == 2 || t.TransactionType == 3) // Withdraw (2), Transfer (3)
-                        .Sum(t => t.Fee);
+                        .Where(t => t.TransactionType == (int)TransactionType.Fee && t.AccountId == 1)
+                        .Sum(t => t.Amount);
 
                     dailyCommissions.Add(new
                     {

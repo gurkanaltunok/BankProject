@@ -24,10 +24,10 @@ namespace BankProject.DataAccess.Concrete
 
         public List<Transaction> GetTransactionsByAccountId(int accountId)
         {
+            // Hesabın kendi işlemleri + sadece transferlerde hedef olduğu işlemler
             return _context.Transactions
                            .Include(t => t.ExchangeRate)
-                           .Where(t => t.AccountId == accountId || 
-                                      (t.TargetAccountId == accountId && t.TransactionType == 3)) // Transfer işlemleri için TargetAccountId kontrolü
+                           .Where(t => t.AccountId == accountId || (t.TargetAccountId == accountId && t.TransactionType == 3))
                            .OrderByDescending(t => t.TransactionDate)
                            .ToList();
         }

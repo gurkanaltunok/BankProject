@@ -8,6 +8,7 @@ import { useTransactions } from '@/lib/hooks/useTransactions';
 import { apiService } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import HeaderBox from '@/components/HeaderBox';
+import { ArrowLeft } from 'lucide-react';
 
 const PaymentTransfer = () => {
   const { isAuthenticated } = useAuth();
@@ -16,6 +17,10 @@ const PaymentTransfer = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const accountIdParam = searchParams.get('accountId');
+
+  const handleGoBack = () => {
+    router.back();
+  };
 
   const [selectedAccountId, setSelectedAccountId] = useState<number>(0);
   const [transactionType, setTransactionType] = useState<'deposit' | 'withdraw' | 'transfer'>('deposit');
@@ -133,8 +138,20 @@ const PaymentTransfer = () => {
     <section className="flex w-full flex-row max-xl:max-h-screen max-xl:overflow-y-scroll">
       <div className="flex w-full flex-1 flex-col gap-8 px-5 sm:px-8 py-7 lg:py-12 xl:max-h-screen xl:overflow-y-scroll">
         <header>
+          <div className="flex items-center gap-4 mb-4">
+            <Button
+              onClick={handleGoBack}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Geri
+            </Button>
+            <h1 className="text-3xl font-bold text-gray-900">Para İşlemleri</h1>
+          </div>
           <HeaderBox 
-            title="Para İşlemleri"
+            title=""
             subtext="Para yatırma, çekme ve transfer işlemlerinizi gerçekleştirin"
           />
         </header>

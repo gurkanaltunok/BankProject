@@ -34,8 +34,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (userId && roleId && apiService.isAuthenticated()) {
         const isValid = await apiService.validateToken();
         if (isValid) {
+          // localStorage'dan kullanıcı bilgilerini yükle
+          const name = localStorage.getItem('userName');
+          const surname = localStorage.getItem('userSurname');
+          const email = localStorage.getItem('userEmail');
+          
           setUser({
             id: userId,
+            name: name || undefined,
+            surname: surname || undefined,
+            email: email || undefined,
             roleId: parseInt(roleId),
           });
         } else {
@@ -53,17 +61,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(true);
       const authResponse: AuthResponse = await apiService.login({ TCKN: tckn, Password: password });
       
+      // Token'ı console'a yazdır
+      console.log('🔑 JWT Token:', authResponse.Token);
+      console.log('👤 User ID:', authResponse.UserId);
+      console.log('🔐 Role ID:', authResponse.RoleId);
+      
       await new Promise(resolve => setTimeout(resolve, 100));
       
       try {
         const userInfo = await apiService.getCurrentUser();
-        setUser({
+        const userData = {
           id: authResponse.UserId,
           name: userInfo.name,
           surname: userInfo.surname,
           email: userInfo.email,
           roleId: authResponse.RoleId,
-        });
+        };
+        
+        // Kullanıcı bilgilerini localStorage'a kaydet
+        if (userInfo.name) localStorage.setItem('userName', userInfo.name);
+        if (userInfo.surname) localStorage.setItem('userSurname', userInfo.surname);
+        if (userInfo.email) localStorage.setItem('userEmail', userInfo.email);
+        
+        setUser(userData);
       } catch (userError) {
         console.error('getCurrentUser error:', userError);
         setUser({
@@ -91,6 +111,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = () => {
     apiService.logout();
+    // Kullanıcı bilgilerini localStorage'dan temizle
+    localStorage.removeItem('userName');
+    localStorage.removeItem('userSurname');
+    localStorage.removeItem('userEmail');
     setUser(null);
   };
 

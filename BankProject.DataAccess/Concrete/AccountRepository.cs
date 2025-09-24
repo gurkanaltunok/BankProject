@@ -52,7 +52,7 @@ namespace BankProject.DataAccess.Concrete
 
         public List<Account> GetAccountsByUserId(int userId)
         {
-            return _context.Accounts.Where(a => a.UserId == userId && a.IsActive).ToList();
+            return _context.Accounts.Where(a => a.UserId == userId).ToList();
         }
 
         public Account GetAccountByIban(string iban)

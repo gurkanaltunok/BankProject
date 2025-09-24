@@ -33,6 +33,7 @@ export const useExchangeRates = () => {
       const newRates: ExchangeRate[] = [
         { currency: 'USD', rate: data.rates.USD || 1 },
         { currency: 'EUR', rate: data.rates.EUR || 1 },
+        { currency: 'GBP', rate: data.rates.GBP || 1 },
         { currency: 'TRY', rate: 1.00 },
       ];
       
@@ -50,7 +51,7 @@ export const useExchangeRates = () => {
   }, []);
 
   const convertToTRY = (amount: number, currencyType: number): number => {
-    const currencyMap = { 0: 'TRY', 1: 'USD', 2: 'EUR' };
+    const currencyMap = { 0: 'TRY', 1: 'USD', 2: 'EUR', 3: 'GBP' };
     const currency = currencyMap[currencyType as keyof typeof currencyMap] || 'TRY';
     
     if (currency === 'TRY') return amount;

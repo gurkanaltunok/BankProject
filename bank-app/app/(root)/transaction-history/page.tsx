@@ -7,6 +7,7 @@ import { useAccounts } from '@/lib/hooks/useAccounts';
 import { useTransactions } from '@/lib/hooks/useTransactions';
 import { Button } from '@/components/ui/button';
 import HeaderBox from '@/components/HeaderBox';
+import { ArrowLeft } from 'lucide-react';
 
 const TransactionHistory = () => {
   const { isAuthenticated, user } = useAuth();
@@ -15,6 +16,10 @@ const TransactionHistory = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const accountIdParam = searchParams.get('accountId');
+
+  const handleGoBack = () => {
+    router.back();
+  };
 
   const [selectedAccountId, setSelectedAccountId] = useState<number | undefined>(undefined);
   const [startDate, setStartDate] = useState('');
@@ -82,9 +87,8 @@ const TransactionHistory = () => {
           t.accountId === selectedAccountId || 
           t.targetAccountId === selectedAccountId;
         
-        // Admin kullanıcıları fee transaction'larını görebilir, normal kullanıcılar göremez
-        const isVisibleToUser = user?.roleId === 2 ? true : t.transactionType !== 4;
-        
+        // Admin ise tüm işlemler, kullanıcı ise fee (4) ve exchange commission (7) gizli
+        const isVisibleToUser = user?.roleId === 2 ? true : (t.transactionType !== 4 && t.transactionType !== 7);
         return isAccountMatch && isVisibleToUser;
       });
 
@@ -258,17 +262,29 @@ const TransactionHistory = () => {
   }
 
   return (
-    <section className="home">
-      <div className="home-content">
-        <header className="home-header">
+    <section className="flex w-full flex-row max-xl:max-h-screen max-xl:overflow-y-scroll">
+      <div className="flex w-full flex-1 flex-col gap-8 px-5 sm:px-8 py-7 lg:py-12 xl:max-h-screen xl:overflow-y-scroll">
+        <header>
+          <div className="flex items-center gap-4 mb-4">
+            <Button
+              onClick={handleGoBack}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Geri
+            </Button>
+            <h1 className="text-3xl font-bold text-gray-900">İşlem Geçmişi</h1>
+          </div>
           <HeaderBox 
-            title="İşlem Geçmişi"
+            title=""
             subtext="Hesap işlemlerinizi görüntüleyin ve filtreleyin"
           />
         </header>
 
         {accounts.length === 0 ? (
-          <div className="text-center py-8">
+          <div className="text-center py-12">
             <p className="text-gray-600">İşlem geçmişini görüntülemek için önce hesap açmalısınız.</p>
             <Button 
               onClick={() => router.push('/my-banks')}
@@ -280,7 +296,7 @@ const TransactionHistory = () => {
         ) : (
           <div className="mt-8 space-y-6">
             {/* Quick Filters */}
-            <div className="bg-white p-6 rounded-lg border">
+            <div className="bg-white rounded-xl shadow-chart border border-gray-200 p-6">
               <h3 className="text-18 font-semibold mb-4">Hızlı Filtreler</h3>
               <div className="flex flex-wrap gap-2">
                 {[
@@ -305,10 +321,10 @@ const TransactionHistory = () => {
             </div>
 
             {/* Advanced Filters */}
-            <form onSubmit={handleFilter} className="bg-white p-6 rounded-lg border space-y-4">
+            <form onSubmit={handleFilter} className="bg-white rounded-xl shadow-chart border border-gray-200 p-6 space-y-6">
               <h3 className="text-18 font-semibold">Gelişmiş Filtreler</h3>
               
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Hesap
@@ -373,7 +389,7 @@ const TransactionHistory = () => {
 
 
             {/* Transactions Table */}
-            <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+            <div className="bg-white rounded-xl shadow-chart border border-gray-200 overflow-hidden">
               <div className="px-6 py-4 border-b">
                 <h3 className="text-18 font-semibold">
                   İşlemler ({filteredTransactions.length})
@@ -472,10 +488,14 @@ const TransactionHistory = () => {
                               </span>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {transaction.transactionType === 4 ? (
-                                <span className="text-orange-600 text-xs">İşlem Ücreti</span>
-                              ) : transaction.fee ? (
-                                <div className="space-y-1">
+                              {(() => {
+                                if (transaction.transactionType === 4) {
+                                  return <span className="text-orange-600 text-xs">İşlem Ücreti</span>;
+                                }
+                                const isIncomingTransfer = transaction.transactionType === 3 && transaction.targetAccountId === transaction.accountId;
+                                if (isIncomingTransfer) return '-';
+                                if (!transaction.fee || transaction.fee === 0) return '-';
+                                return (
                                   <div>
                                     {getCurrencySymbol(account?.currencyType || 0)}
                                     {transaction.fee.toLocaleString('tr-TR', { 
@@ -483,21 +503,8 @@ const TransactionHistory = () => {
                                       maximumFractionDigits: 2
                                     })}
                                   </div>
-                                  {transaction.feeInTRY && transaction.feeInTRY !== transaction.fee && (
-                                    <div className="text-xs text-gray-500">
-                                      (₺{transaction.feeInTRY.toLocaleString('tr-TR', { 
-                                        minimumFractionDigits: 2,
-                                        maximumFractionDigits: 2
-                                      })})
-                                    </div>
-                                  )}
-                                  {transaction.exchangeRate && (
-                                    <div className="text-xs text-blue-600">
-                                      Kur: {transaction.exchangeRate.rate.toFixed(4)}
-                                    </div>
-                                  )}
-                                </div>
-                              ) : '-'}
+                                );
+                              })()}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                               {getCurrencySymbol(account?.currencyType || 0)}
@@ -515,74 +522,7 @@ const TransactionHistory = () => {
               )}
             </div>
 
-            {/* Summary */}
-            {filteredTransactions.length > 0 && (
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <h4 className="font-semibold text-blue-900 mb-2">Özet</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
-                  <div>
-                    <span className="text-blue-700">Toplam İşlem: </span>
-                    <span className="font-semibold">{filteredTransactions.length}</span>
-                  </div>
-                  <div>
-                    <span className="text-green-700 font-semibold">Para Yatırma: </span>
-                    <span className="font-bold text-green-800">
-                      {filteredTransactions.filter(t => t.transactionType === 1).length}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-red-700 font-semibold">Para Çekme: </span>
-                    <span className="font-bold text-red-800">
-                      {filteredTransactions.filter(t => t.transactionType === 2).length}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-green-700 font-semibold">Transfer (Gelen): </span>
-                    <span className="font-bold text-green-800">
-                      {filteredTransactions.filter(t => t.transactionType === 3 && t.targetAccountId && t.targetAccountId !== t.accountId).length}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-red-700 font-semibold">Transfer (Giden): </span>
-                    <span className="font-bold text-red-800">
-                      {filteredTransactions.filter(t => t.transactionType === 3 && t.targetAccountId && t.targetAccountId !== t.accountId).length}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-blue-700 font-semibold">Döviz Alış: </span>
-                    <span className="font-bold text-blue-800">
-                      {filteredTransactions.filter(t => t.transactionType === 5).length}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-purple-700 font-semibold">Döviz Satış: </span>
-                    <span className="font-bold text-purple-800">
-                      {filteredTransactions.filter(t => t.transactionType === 6).length}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-green-700 font-semibold">Döviz Girişi: </span>
-                    <span className="font-bold text-green-800">
-                      {filteredTransactions.filter(t => t.transactionType === 8).length}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-red-700 font-semibold">Döviz Çıkışı: </span>
-                    <span className="font-bold text-red-800">
-                      {filteredTransactions.filter(t => t.transactionType === 9).length}
-                    </span>
-                  </div>
-                  {user?.roleId === 2 && (
-                    <div>
-                      <span className="text-orange-700 font-semibold">İşlem Ücreti: </span>
-                      <span className="font-bold text-orange-800">
-                        {filteredTransactions.filter(t => t.transactionType === 4).length}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
+            
           </div>
         )}
       </div>

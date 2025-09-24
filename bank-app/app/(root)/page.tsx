@@ -110,34 +110,33 @@ const Home = () => {
       
       return sum + convertedBalance;
     }, 0);
-
-    let finalBalance = totalBalanceTRY;
+    
+    // Hedef değeri her zaman TRY bazlı hesapla; ekranda hangi para birimi seçiliyse ona çevirerek arttır
+    let target = totalBalanceTRY;
     if (displayCurrency === 'USD') {
       const usdRate = rates.find(r => r.currency === 'USD')?.rate || 34.50;
-      finalBalance = totalBalanceTRY / usdRate;
+      target = totalBalanceTRY / usdRate;
     } else if (displayCurrency === 'EUR') {
       const eurRate = rates.find(r => r.currency === 'EUR')?.rate || 37.20;
-      finalBalance = totalBalanceTRY / eurRate;
+      target = totalBalanceTRY / eurRate;
     }
-    
-    if (finalBalance > 0) {
-      const duration = 2000;
-      const steps = 60;
-      const increment = finalBalance / steps;
-      let current = 0;
-      
-      const timer = setInterval(() => {
-        current += increment;
-        if (current >= finalBalance) {
-          setDisplayBalance(finalBalance);
-          clearInterval(timer);
-        } else {
-          setDisplayBalance(Math.floor(current * 100) / 100);
-        }
-      }, duration / steps);
 
-      return () => clearInterval(timer);
-    }
+    const duration = 2000;
+    const steps = 60;
+    const increment = target / steps;
+    let current = 0;
+
+    const timer = setInterval(() => {
+      current += increment;
+      if (current >= target) {
+        setDisplayBalance(Number(target.toFixed(2)));
+        clearInterval(timer);
+      } else {
+        setDisplayBalance(Number(current.toFixed(2)));
+      }
+    }, duration / steps);
+
+    return () => clearInterval(timer);
   }, [accounts, rates, displayCurrency]);
 
   if (authLoading || accountsLoading) {
@@ -270,7 +269,7 @@ const Home = () => {
   return (
     <div className="w-full">
       <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="px-5 sm:px-8 py-6">
           <div className="flex items-center justify-between">
                     <div>
               <h1 className="text-2xl font-bold">
@@ -284,14 +283,6 @@ const Home = () => {
               <div className="flex items-center justify-end gap-2 mb-1">
                 <div className="flex items-center gap-2">
                   <p className="text-sm text-gray-500">Toplam Bakiye</p>
-                  <div className="relative group">
-                    <svg className="w-3 h-3 text-gray-400 cursor-help" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
-                    </svg>
-                    <div className="absolute bottom-full right-0 mb-2 w-48 p-2 bg-gray-800 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10">
-                      Güncel döviz kurları ile hesaplanır. Her 30 saniyede otomatik güncellenir.
-                    </div>
-                  </div>
                 </div>
                 {isUpdatingBalance && (
                   <div className="animate-spin rounded-full h-3 w-3 border-b border-blue-600"></div>
@@ -315,23 +306,17 @@ const Home = () => {
               </div>
               <p className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
                 {displayCurrency === 'TRY' ? '₺' : displayCurrency === 'USD' ? '$' : '€'}
-                {displayCurrency === 'TRY' 
-                  ? totalBalanceInTRY.toLocaleString('tr-TR', {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2
-                    })
-                  : displayBalance.toLocaleString('tr-TR', {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2
-                    })
-                }
-                      </p>
+                {displayBalance.toLocaleString('tr-TR', {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2
+                })}
+              </p>
                     </div>
                   </div>
                 </div>
-      </div>
+        </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="px-5 sm:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
             <div className="bg-white rounded-lg shadow-sm border">

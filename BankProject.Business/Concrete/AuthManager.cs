@@ -94,18 +94,18 @@ namespace BankProject.Business.Concrete
 
             var claims = new[]
             {
-                new Claim(JwtRegisteredClaimNames.Sub, user.TCKN),
+                new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()), // User ID as subject
                 new Claim("UserId", user.Id.ToString()),
                 new Claim("RoleId", user.RoleId.ToString()),
-                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                new Claim(ClaimTypes.Role, user.RoleId.ToString())
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()), // Unique token ID
+                new Claim(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64) // Issued at
             };
 
             var token = new JwtSecurityToken(
                 issuer: _config["Jwt:Issuer"],
                 audience: _config["Jwt:Audience"],
                 claims: claims,
-                expires: DateTime.Now.AddMinutes(15), // 15 minute token lifetime for maximum security
+                expires: DateTime.Now.AddHours(1), // 1 hour token lifetime for better security
                 signingCredentials: creds
             );
 

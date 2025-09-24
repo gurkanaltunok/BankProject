@@ -193,6 +193,11 @@ namespace BankProject.Business.Concrete
                 exchangeRateId = rateId;
             }
 
+            // Previous balances for history
+            var fromPreviousBalance = fromAccount.Balance;
+            var toPreviousBalance = toAccount.Balance;
+            var bankPreviousBalance = bank.Balance;
+
             fromAccount.Balance -= totalDebit;
             toAccount.Balance += amount;
             bank.Balance += feeInTRY;
@@ -203,7 +208,12 @@ namespace BankProject.Business.Concrete
 
             var createdTransaction = AddTransaction(fromAccountId, toAccountId, amount, fee, (int)TransactionType.Transfer, description, fromAccount.Balance, feeInTRY, exchangeRateId);
 
-            AddTransaction(bank.AccountId, fromAccountId, feeInTRY, 0, (int)TransactionType.Fee, $"İşlem Ücreti - Hesap {fromAccountId}", bank.Balance);
+            var bankFeeTx = AddTransaction(bank.AccountId, fromAccountId, feeInTRY, 0, (int)TransactionType.Fee, $"İşlem Ücreti - Hesap {fromAccountId}", bank.Balance);
+
+            // Record balance history for charts
+            _balanceHistoryService.RecordBalanceChange(fromAccountId, fromPreviousBalance, fromAccount.Balance, -totalDebit, "Transfer - Giden", description, createdTransaction.TransactionId);
+            _balanceHistoryService.RecordBalanceChange(toAccountId, toPreviousBalance, toAccount.Balance, amount, "Transfer - Gelen", description, createdTransaction.TransactionId);
+            _balanceHistoryService.RecordBalanceChange(bank.AccountId, bankPreviousBalance, bank.Balance, feeInTRY, "Fee", $"İşlem Ücreti - Hesap {fromAccountId}", bankFeeTx.TransactionId);
 
             return new TransactionDTO
             {
@@ -224,15 +234,15 @@ namespace BankProject.Business.Concrete
         public List<Transaction> GetTransactionsByAccountId(int accountId)
         {
             var transactions = _transactionRepository.GetTransactionsByAccountId(accountId);
-            // type 7 - ExchangeCommission
-            return transactions.Where(t => t.TransactionType != 7).ToList();
+            // Tüm transaction tiplerini döndür (fee ve exchange commission dahil)
+            return transactions;
         }
 
         public List<Transaction> GetTransactionsByDateRange(DateTime? startDate, DateTime? endDate, int? accountId, int? userId = null)
         {
             var transactions = _transactionRepository.GetTransactionsByDateRange(startDate, endDate, accountId, userId);
-            // type 7 - ExchangeCommission
-            return transactions.Where(t => t.TransactionType != 7).ToList();
+            // Tüm transaction tiplerini döndür (fee ve exchange commission dahil)
+            return transactions;
         }
 
         public bool CheckAccountOwner(int accountId, int userId)
@@ -309,8 +319,12 @@ namespace BankProject.Business.Concrete
             };
             _transactionRepository.AddTransaction(exchangeTransaction);
 
+            // Banka için fee transaction'ı oluştur
+            var bankFeeTx = AddTransaction(bankAccount.AccountId, dto.FromAccountId, commission, 0, (int)TransactionType.Fee, $"Döviz Alış Komisyonu - Hesap {dto.FromAccountId}", bankAccount.Balance, commission, currentExchangeRate?.ExchangeRateId);
+
             _balanceHistoryService.RecordBalanceChange(dto.FromAccountId, tryAccount.Balance + totalAmount, tryAccount.Balance, -totalAmount, "Döviz Alış - TRY Çıkış", "Döviz Alış - TRY Çıkış", tryTransaction.TransactionId);
             _balanceHistoryService.RecordBalanceChange(dto.ToAccountId, exchangeAccount.Balance - dto.AmountForeign, exchangeAccount.Balance, dto.AmountForeign, "Döviz Alış - Döviz Giriş", "Döviz Alış - Döviz Giriş", exchangeTransaction.TransactionId);
+            _balanceHistoryService.RecordBalanceChange(bankAccount.AccountId, bankAccount.Balance - commission, bankAccount.Balance, commission, "Döviz Alış Komisyonu", $"Döviz Alış Komisyonu - Hesap {dto.FromAccountId}", bankFeeTx.TransactionId);
 
             return tryTransaction;
         }
@@ -378,8 +392,12 @@ namespace BankProject.Business.Concrete
             };
             _transactionRepository.AddTransaction(tryTransaction);
 
+            // Banka için fee transaction'ı oluştur
+            var bankFeeTx2 = AddTransaction(bankAccount.AccountId, dto.ToAccountId, commission, 0, (int)TransactionType.Fee, $"Döviz Satış Komisyonu - Hesap {dto.FromAccountId}", bankAccount.Balance, commission, currentExchangeRate?.ExchangeRateId);
+
             _balanceHistoryService.RecordBalanceChange(dto.FromAccountId, exchangeAccount.Balance + dto.AmountForeign, exchangeAccount.Balance, -dto.AmountForeign, "Döviz Satış - Döviz Çıkış", "Döviz Satış - Döviz Çıkış", exchangeTransaction.TransactionId);
             _balanceHistoryService.RecordBalanceChange(dto.ToAccountId, tryAccount.Balance - netAmount, tryAccount.Balance, netAmount, "Döviz Satış - TRY Giriş", "Döviz Satış - TRY Giriş", tryTransaction.TransactionId);
+            _balanceHistoryService.RecordBalanceChange(bankAccount.AccountId, bankAccount.Balance - commission, bankAccount.Balance, commission, "Döviz Satış Komisyonu", $"Döviz Satış Komisyonu - Hesap {dto.FromAccountId}", bankFeeTx2.TransactionId);
 
             return tryTransaction;
         }

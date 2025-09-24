@@ -125,11 +125,20 @@ class ApiService {
   private async handleResponse<T>(response: Response): Promise<T> {
     if (!response.ok) {
       if (response.status === 401) {
-        this.logout();
-        if (typeof window !== 'undefined') {
+        // Login sayfasındaysak logout yapma
+        if (typeof window !== 'undefined' && !window.location.pathname.includes('/sign-in')) {
+          this.logout();
           window.location.href = '/sign-in';
         }
-        throw new Error('Authentication expired. Please login again.');
+        throw new Error('Invalid credentials');
+      }
+      
+      if (response.status === 400) {
+        const errorData = await response.text();
+        if (errorData.includes('Invalid') || errorData.includes('Wrong') || errorData.includes('not found')) {
+          throw new Error('Invalid credentials');
+        }
+        throw new Error(errorData || 'Bad request');
       }
       
       const errorData = await response.text();
@@ -212,6 +221,31 @@ class ApiService {
   getCurrentUserId(): number | null {
     const userId = localStorage.getItem('userId');
     return userId ? parseInt(userId) : null;
+  }
+
+  getCurrentToken(): string | null {
+    return localStorage.getItem('token');
+  }
+
+  displayTokenInfo(): void {
+    const token = this.getCurrentToken();
+    const userId = this.getCurrentUserId();
+    const roleId = localStorage.getItem('roleId');
+    
+    console.log('🔍 Current Token Info:');
+    console.log('🔑 Token:', token);
+    console.log('👤 User ID:', userId);
+    console.log('🔐 Role ID:', roleId);
+    
+    if (token) {
+      // JWT token'ı decode etmeye çalış (sadece payload kısmı)
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        console.log('📋 Token Payload:', payload);
+      } catch (e) {
+        console.log('❌ Token decode edilemedi');
+      }
+    }
   }
 
   async validateToken(): Promise<boolean> {

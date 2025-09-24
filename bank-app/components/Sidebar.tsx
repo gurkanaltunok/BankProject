@@ -62,7 +62,7 @@ const Sidebar = ({ user }: SiderbarProps) => {
         <div className="flex items-center gap-3 p-4 border-t border-gray-200">
           <div className="flex-1">
             <p className="text-sm font-medium text-gray-900">
-              {user.firstName} {user.lastName}
+              {user.name} {user.surname}
             </p>
             <p className="text-xs text-gray-500">
               {user.email}

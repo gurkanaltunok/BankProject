@@ -5,10 +5,16 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import HeaderBox from '@/components/HeaderBox';
 import { apiService } from '@/lib/api';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft } from 'lucide-react';
 
 const ChangePassword = () => {
   const { user, isAuthenticated, loading: authLoading } = useAuth();
   const router = useRouter();
+
+  const handleGoBack = () => {
+    router.back();
+  };
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     currentPassword: '',
@@ -65,19 +71,7 @@ const ChangePassword = () => {
 
     try {
       setLoading(true);
-      
-      // First verify current password by attempting login
-      try {
-        await apiService.login({
-          TCKN: user?.tckn || '',
-          Password: formData.currentPassword
-        });
-      } catch (loginError) {
-        setErrors({ currentPassword: 'Mevcut şifre yanlış' });
-        return;
-      }
 
-      // If login successful, update password
       await apiService.changePassword({
         currentPassword: formData.currentPassword,
         newPassword: formData.newPassword
@@ -85,9 +79,17 @@ const ChangePassword = () => {
 
       alert('Şifre başarıyla değiştirildi');
       router.push('/profile');
-    } catch (error) {
-      console.error('Şifre değiştirilirken hata oluştu:', error);
-      alert('Şifre değiştirilirken hata oluştu. Lütfen tekrar deneyin.');
+    } catch (err: any) {
+      const msg = (err?.message || '').toString();
+      if (msg.includes('Mevcut şifre yanlış') || msg.toLowerCase().includes('current') || msg.toLowerCase().includes('mevcut')) {
+        setErrors({ currentPassword: 'Mevcut şifre yanlış' });
+        return;
+      }
+      if (msg.includes('6 haneli') || msg.includes('6') || msg.toLowerCase().includes('regex')) {
+        setErrors({ newPassword: 'Şifre 6 haneli olmalı ve sadece rakamlardan oluşmalı' });
+        return;
+      }
+      alert(msg || 'Şifre değiştirilirken bir hata oluştu');
     } finally {
       setLoading(false);
     }
@@ -109,10 +111,22 @@ const ChangePassword = () => {
   return (
     <section className="home min-h-screen">
       <div className="home-content min-h-screen">
-        <header className="home-header text-center">
+        <header className="home-header">
+          <div className="flex items-center gap-4 mb-4">
+            <Button
+              onClick={handleGoBack}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Geri
+            </Button>
+            <h1 className="text-3xl font-bold text-gray-900">Şifre Değiştir</h1>
+          </div>
           <HeaderBox 
             type="greeting"
-            title="Şifre Değiştir"
+            title=""
             user=""
             subtext="Hesap güvenliğiniz için şifrenizi güncelleyin"
           />

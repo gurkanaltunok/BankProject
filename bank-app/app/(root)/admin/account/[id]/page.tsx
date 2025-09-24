@@ -43,7 +43,7 @@ const AdminAccountDetail = () => {
     if (!authLoading && !isAuthenticated) {
       router.push('/sign-in');
     } else if (user?.roleId !== 2) {
-      router.push('/');
+      router.push('/unauthorized');
     }
   }, [isAuthenticated, authLoading, user, router]);
 

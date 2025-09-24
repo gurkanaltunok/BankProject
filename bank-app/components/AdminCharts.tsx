@@ -13,6 +13,7 @@ import {
   LineElement,
 } from 'chart.js';
 import { Bar, Doughnut, Line } from 'react-chartjs-2';
+import { useExchangeRates } from '@/lib/hooks/useExchangeRates';
 
 ChartJS.register(
   CategoryScale,
@@ -37,23 +38,36 @@ interface AdminChartsProps {
 }
 
 export default function AdminCharts({ bankBalance, totalBalance, totalUsers, totalAccounts, accounts = [], dailyTransactionVolume = [], dailyCommissionRevenue = [] }: AdminChartsProps) {
+  const { rates, convertToTRY } = useExchangeRates();
+
+  const currencySymbol: Record<string, string> = {
+    TRY: '₺',
+    USD: '$',
+    EUR: '€',
+    GBP: '£',
+  };
+  // Para birimi dağılımı (hesap bakiyelerine göre) — sıfır toplamlı para birimleri gösterilmez
+  const totalsByCurrency = [
+    { label: 'TRY', currencyType: 0, colorBg: 'rgba(37, 99, 235, 0.8)', colorBd: 'rgba(37, 99, 235, 1)' },
+    { label: 'USD', currencyType: 1, colorBg: 'rgba(59, 130, 246, 0.8)', colorBd: 'rgba(59, 130, 246, 1)' },
+    { label: 'EUR', currencyType: 2, colorBg: 'rgba(96, 165, 250, 0.8)', colorBd: 'rgba(96, 165, 250, 1)' },
+    { label: 'GBP', currencyType: 3, colorBg: 'rgba(147, 197, 253, 0.8)', colorBd: 'rgba(147, 197, 253, 1)' },
+  ].map(item => {
+    const totalOriginal = accounts
+      .filter(acc => acc.currencyType === item.currencyType)
+      .reduce((sum, acc) => sum + (acc.balance || 0), 0);
+    const totalInTRY = convertToTRY(totalOriginal, item.currencyType);
+    return { ...item, totalOriginal, totalInTRY };
+  }).filter(item => item.totalInTRY > 0);
+
   const currencyDistribution = {
-    labels: ['TRY', 'USD', 'EUR', 'GBP'],
+    labels: totalsByCurrency.map(i => i.label),
     datasets: [
       {
-        data: [totalBalance * 0.6, totalBalance * 0.25, totalBalance * 0.12, totalBalance * 0.03], // Mock data
-        backgroundColor: [
-          'rgba(37, 99, 235, 0.8)',   // TRY - Koyu Mavi
-          'rgba(59, 130, 246, 0.8)',  // USD - Mavi
-          'rgba(96, 165, 250, 0.8)',  // EUR - Açık Mavi
-          'rgba(147, 197, 253, 0.8)', // GBP - Çok Açık Mavi
-        ],
-        borderColor: [
-          'rgba(37, 99, 235, 1)',
-          'rgba(59, 130, 246, 1)',
-          'rgba(96, 165, 250, 1)',
-          'rgba(147, 197, 253, 1)',
-        ],
+        // Dilim alanını TRY karşılığına göre hesapla
+        data: totalsByCurrency.map(i => i.totalInTRY),
+        backgroundColor: totalsByCurrency.map(i => i.colorBg),
+        borderColor: totalsByCurrency.map(i => i.colorBd),
         borderWidth: 2,
       },
     ],
@@ -216,10 +230,14 @@ export default function AdminCharts({ bankBalance, totalBalance, totalUsers, tot
         callbacks: {
           label: function(context: any) {
             const label = context.label || '';
-            const value = context.parsed;
+            const valueTRY = context.parsed as number;
             const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
-            const percentage = ((value / total) * 100).toFixed(1);
-            return `${label}: ₺${value.toLocaleString('tr-TR')} (${percentage}%)`;
+            const percentage = total > 0 ? ((valueTRY / total) * 100).toFixed(1) : '0.0';
+            const entry = totalsByCurrency.find(i => i.label === label);
+            const symbol = currencySymbol[label] || '';
+            const original = entry ? entry.totalOriginal : 0;
+            // Örn: USD: $1,234.56 (₺45,678.90) %12.3
+            return `${label}: ${symbol}${original.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (₺${valueTRY.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}) (${percentage}%)`;
           }
         }
       }

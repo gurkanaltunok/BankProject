@@ -5,10 +5,16 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { apiService } from '@/lib/api';
 import HeaderBox from '@/components/HeaderBox';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft } from 'lucide-react';
 
 const AdminUsers = () => {
   const { user, isAuthenticated, loading: authLoading } = useAuth();
   const router = useRouter();
+
+  const handleGoBack = () => {
+    router.back();
+  };
   
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -18,7 +24,7 @@ const AdminUsers = () => {
     if (!authLoading && !isAuthenticated) {
       router.push('/sign-in');
     } else if (user?.roleId !== 2) {
-      router.push('/');
+      router.push('/unauthorized');
     }
   }, [isAuthenticated, authLoading, user, router]);
 
@@ -86,24 +92,23 @@ const AdminUsers = () => {
     <div className="p-6 space-y-6">
       {/* Header */}
       <header>
+        <div className="flex items-center gap-4 mb-4">
+          <Button
+            onClick={handleGoBack}
+            variant="outline"
+            size="sm"
+            className="flex items-center gap-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Geri
+          </Button>
+          <h1 className="text-3xl font-bold text-gray-900">Kullanıcı Yönetimi</h1>
+        </div>
         <HeaderBox 
-          title="Kullanıcı Yönetimi"
+          title=""
           subtext="Sistem kullanıcılarını yönetin ve rollerini düzenleyin"
         />
       </header>
-
-      {/* Back Button */}
-      <div className="flex justify-start">
-        <button
-          onClick={() => router.push('/')}
-          className="flex items-center px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
-        >
-          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          Ana Sayfaya Dön
-        </button>
-      </div>
 
       {/* Summary Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

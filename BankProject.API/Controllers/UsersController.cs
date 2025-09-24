@@ -56,6 +56,7 @@ public class UsersController : ControllerBase
             email = user.Email,
             tckn = user.TCKN,
             phoneNumber = user.PhoneNumber,
+            birthDate = user.BirthDate,
             address = user.Address,
             roleId = user.RoleId
         });

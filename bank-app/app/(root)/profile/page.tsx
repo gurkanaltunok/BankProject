@@ -5,10 +5,16 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import HeaderBox from '@/components/HeaderBox';
 import { apiService } from '@/lib/api';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft } from 'lucide-react';
 
 const Profile = () => {
   const { user, isAuthenticated, loading: authLoading } = useAuth();
   const router = useRouter();
+
+  const handleGoBack = () => {
+    router.back();
+  };
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState(false);
   const [userDetails, setUserDetails] = useState<any>(null);
@@ -90,13 +96,14 @@ const Profile = () => {
         setAddressDetails(null);
       }
       
+      const resolvedBirthDate = userData.birthDate || userData.BirthDate || '';
       setFormData({
         name: userData.name || '',
         surname: userData.surname || '',
         email: userData.email || '',
         phoneNumber: userData.phoneNumber || '',
         tckn: userData.tckn || '',
-        birthDate: userData.birthDate ? new Date(userData.birthDate).toISOString().split('T')[0] : '',
+        birthDate: resolvedBirthDate ? new Date(resolvedBirthDate).toISOString().split('T')[0] : '',
         country: addressData?.country || '',
         city: addressData?.city || '',
         district: addressData?.district || '',
@@ -231,13 +238,14 @@ const Profile = () => {
 
   const handleCancel = () => {
     if (userDetails) {
+      const resolvedBirthDate = userDetails.birthDate || userDetails.BirthDate || '';
       setFormData({
         name: userDetails.name || '',
         surname: userDetails.surname || '',
         email: userDetails.email || '',
         phoneNumber: userDetails.phoneNumber || '',
         tckn: userDetails.tckn || '',
-        birthDate: userDetails.birthDate ? new Date(userDetails.birthDate).toISOString().split('T')[0] : '',
+        birthDate: resolvedBirthDate ? new Date(resolvedBirthDate).toISOString().split('T')[0] : '',
         country: addressDetails?.country || '',
         city: addressDetails?.city || '',
         district: addressDetails?.district || '',
@@ -266,9 +274,21 @@ const Profile = () => {
     <section className="home">
       <div className="home-content">
         <header className="home-header">
+          <div className="flex items-center gap-4 mb-4">
+            <Button
+              onClick={handleGoBack}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Geri
+            </Button>
+            <h1 className="text-3xl font-bold text-gray-900">Profil Bilgilerim</h1>
+          </div>
           <HeaderBox 
             type="greeting"
-            title="Profil Bilgilerim"
+            title=""
             user={user?.name || 'Kullanıcı'}
             subtext="Kişisel bilgilerinizi görüntüleyin ve düzenleyin"
           />

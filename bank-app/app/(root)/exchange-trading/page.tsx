@@ -41,7 +41,8 @@ export default function ExchangeTradingPage() {
   useEffect(() => {
     const fetchExchangeRates = async () => {
       try {
-        const response = await fetch('http://localhost:5020/api/Admin/exchange-service');
+        // Değişim yüzdeleri ile birlikte kurları al
+        const response = await fetch('http://localhost:5020/api/Admin/exchange-rates-with-change');
         if (response.ok) {
           const data = await response.json();
           if (data.rates) {
@@ -51,14 +52,16 @@ export default function ExchangeTradingPage() {
               const spread = 0.005; // %0.5 spread
               const buy = currentRate * (1 - spread);
               const sell = currentRate * (1 + spread);
+              const changePercent = data.rates[`${currency}_CHANGE`] || 0;
+              const change = (currentRate * changePercent) / 100;
               
               return {
                 currency,
                 symbol: getCurrencySymbol(currency),
                 buy: Number(buy.toFixed(2)),
                 sell: Number(sell.toFixed(2)),
-                change: 0, // Basit tutuyoruz şimdilik
-                changePercent: 0
+                change: Number(change.toFixed(3)),
+                changePercent: Number(changePercent.toFixed(2))
               };
             });
             setRates(newRates);
@@ -226,10 +229,9 @@ export default function ExchangeTradingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <HeaderBox />
-      
-      <div className="max-w-7xl mx-auto px-4 py-8">
+    <section className="flex w-full flex-row max-xl:max-h-screen max-xl:overflow-y-scroll">
+      <div className="flex w-full flex-1 flex-col gap-8 px-5 sm:px-8 py-7 lg:py-12 xl:max-h-screen xl:overflow-y-scroll">
+        <HeaderBox />
         {/* Başlık ve Açıklama */}
         <div className="mb-8">
           <div className="flex items-center gap-4 mb-4">
@@ -250,13 +252,13 @@ export default function ExchangeTradingPage() {
         </div>
 
 
-        <div className="max-w-5xl mx-auto">
+        <div>
           {/* İşlem Türü ve Hesap Seçimi */}
           <div className="space-y-6">
             {/* İşlem Türü Seçimi */}
-            <div className="bg-white rounded-xl shadow-lg p-8">
+            <div className="bg-white rounded-2xl shadow-lg p-8">
               <h2 className="text-xl font-semibold text-gray-900 mb-6 text-center">İşlem Türü Seçin</h2>
-              <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
+              <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
                 <button
                   onClick={() => setTransactionType('buy')}
                   className={`p-6 rounded-xl border-2 transition-all ${
@@ -283,11 +285,11 @@ export default function ExchangeTradingPage() {
             </div>
 
             {/* Güncel Döviz Kurları */}
-            <div className="bg-white rounded-xl shadow-lg p-6">
+            <div className="bg-white rounded-2xl shadow-lg p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4 text-center">Güncel Döviz Kurları</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl mx-auto">
+              <div className="grid w-full grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {rates.map((rate) => (
-                  <div key={rate.currency} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 hover:shadow-md transition-shadow">
+                  <div key={rate.currency} className="flex items-center justify-between p-5 bg-gray-50 rounded-lg border border-gray-200 hover:shadow-md transition-shadow w-full h-full">
                     <div className="flex items-center gap-3">
                       <span className="text-xl font-bold">
                         {rate.currency === 'USD' ? '$' : 
@@ -308,12 +310,20 @@ export default function ExchangeTradingPage() {
                         {rate.buy.toFixed(2)} / {rate.sell.toFixed(2)}
                       </div>
                       <div className="text-xs text-gray-600 mb-1">Alış / Satış</div>
-                      <div className={`text-xs font-medium ${rate.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {rate.change >= 0 ? '+' : ''}{rate.change.toFixed(3)} ({rate.changePercent >= 0 ? '+' : ''}{rate.changePercent.toFixed(2)}%)
+                      <div className="flex items-center justify-end gap-1">
+                        <svg className={`w-3 h-3 ${rate.change >= 0 ? 'text-green-600' : 'text-red-600'}`} viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={rate.change >= 0 ? 'M5 10l7-7m0 0l7 7m-7-7v18' : 'M19 14l-7 7m0 0l-7-7m7 7V3'} />
+                        </svg>
+                        <span className={`text-xs font-medium ${rate.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {rate.change >= 0 ? '+' : ''}{rate.change.toFixed(2)}
+                        </span>
+                        <span className={`text-xs ${rate.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          ({rate.change >= 0 ? '+' : ''}{rate.changePercent.toFixed(2)}%)
+                        </span>
                       </div>
                     </div>
-                  </div>
-                ))}
+                   </div>
+                 ))}
               </div>
               <p className="text-sm text-gray-500 mt-4 text-center">
                 Son güncelleme: {lastUpdate ? lastUpdate.toLocaleTimeString('tr-TR') : 'Yükleniyor...'}
@@ -321,9 +331,9 @@ export default function ExchangeTradingPage() {
             </div>
 
             {/* Hesap Seçimi */}
-            <div className="bg-white rounded-xl shadow-lg p-8">
+            <div className="bg-white rounded-2xl shadow-lg p-8">
               <h2 className="text-xl font-semibold text-gray-900 mb-6">Hesap Seçimi</h2>
-              <div className="grid md:grid-cols-2 gap-6">
+              <div className="grid md:grid-cols-2 lg:grid-cols-2 gap-8">
                 {/* İlk Hesap - Alışta TRY, Satışta Döviz */}
                 <div className="space-y-3">
                   <h3 className="text-lg font-medium text-gray-800">
@@ -338,7 +348,7 @@ export default function ExchangeTradingPage() {
                         setExchangeAccountId(parseInt(e.target.value));
                       }
                     }}
-                    className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                    className="w-full p-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                   >
                     {(transactionType === 'buy' ? tryAccounts : exchangeAccounts).map((account) => (
                       <option key={account.id} value={account.id}>
@@ -371,7 +381,7 @@ export default function ExchangeTradingPage() {
                         setTryAccountId(parseInt(e.target.value));
                       }
                     }}
-                    className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                    className="w-full p-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                   >
                     {(transactionType === 'buy' ? exchangeAccounts : tryAccounts).map((account) => (
                       <option key={account.id} value={account.id}>
@@ -393,7 +403,7 @@ export default function ExchangeTradingPage() {
             </div>
 
             {/* Tutar Girişi */}
-            <div className="bg-white rounded-xl shadow-lg p-8">
+            <div className="bg-white rounded-2xl shadow-lg p-8">
               <h2 className="text-xl font-semibold text-gray-900 mb-6">Tutar Girişi</h2>
               <div className="grid md:grid-cols-2 gap-6">
                 <div className="space-y-3">
@@ -405,7 +415,7 @@ export default function ExchangeTradingPage() {
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
                     placeholder="0.00"
-                    className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
+                    className="w-full p-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg"
                     step="0.01"
                     min="0"
                   />
@@ -415,9 +425,9 @@ export default function ExchangeTradingPage() {
                 </div>
                 <div className="space-y-3">
                   <label className="block text-sm font-medium text-gray-700">
-                    {transactionType === 'buy' ? `${getCurrencyTypeLabel(selectedExchangeAccount?.currencyType || 1)} Tutarı` : 'TRy Tutarı'}
+                    {transactionType === 'buy' ? `${getCurrencyTypeLabel(selectedExchangeAccount?.currencyType || 1)} Tutarı` : 'TRY Tutarı'}
                   </label>
-                  <div className="w-full p-4 border border-gray-300 rounded-lg bg-gray-50 text-lg font-semibold">
+                  <div className="w-full p-4 border-2 border-gray-200 rounded-xl bg-gray-50 text-lg font-semibold">
                     {calculatedAmount > 0 ? calculatedAmount.toFixed(2) : '0.00'}
                   </div>
                   <p className="text-xs text-gray-500">
@@ -468,6 +478,6 @@ export default function ExchangeTradingPage() {
           </div>
         </div>
       </div>
-    </div>
+    </section>
   );
 }

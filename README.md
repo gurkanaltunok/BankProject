@@ -126,7 +126,7 @@ NEXT_PUBLIC_API_URL=http://localhost:5020/api npm run dev
 All images live under `docs/screenshots/`. Below is a structured gallery.
 
 ### Overview
-| Homepage | My Banks |
+| Homepage | My Accounts |
 |---|---|
 | ![Homepage](docs/screenshots/homepage.png) | ![My Banks](docs/screenshots/my-banks.png) |
 

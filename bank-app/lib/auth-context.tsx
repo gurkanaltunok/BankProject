@@ -61,10 +61,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(true);
       const authResponse: AuthResponse = await apiService.login({ TCKN: tckn, Password: password });
       
-      // Token'ı console'a yazdır
-      console.log('🔑 JWT Token:', authResponse.Token);
-      console.log('👤 User ID:', authResponse.UserId);
-      console.log('🔐 Role ID:', authResponse.RoleId);
       
       await new Promise(resolve => setTimeout(resolve, 100));
       

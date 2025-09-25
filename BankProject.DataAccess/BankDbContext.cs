@@ -63,6 +63,10 @@ namespace BankProject.DataAccess
                 .Property(u => u.RoleId)
                 .HasDefaultValue(1);
 
+            modelBuilder.Entity<User>()
+                .Property(u => u.RegisterDate)
+                .HasDefaultValueSql("GETUTCDATE()");
+
             // ExchangeRate konfigürasyonu
             modelBuilder.Entity<ExchangeRate>()
                 .Property(e => e.UsdRate)

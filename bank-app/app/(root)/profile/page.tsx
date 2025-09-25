@@ -101,7 +101,7 @@ const Profile = () => {
         name: userData.name || '',
         surname: userData.surname || '',
         email: userData.email || '',
-        phoneNumber: userData.phoneNumber || '',
+        phoneNumber: formatPhoneNumber(userData.phoneNumber || ''),
         tckn: userData.tckn || '',
         birthDate: resolvedBirthDate ? new Date(resolvedBirthDate).toISOString().split('T')[0] : '',
         country: addressData?.country || '',
@@ -243,7 +243,7 @@ const Profile = () => {
         name: userDetails.name || '',
         surname: userDetails.surname || '',
         email: userDetails.email || '',
-        phoneNumber: userDetails.phoneNumber || '',
+        phoneNumber: formatPhoneNumber(userDetails.phoneNumber || ''),
         tckn: userDetails.tckn || '',
         birthDate: resolvedBirthDate ? new Date(resolvedBirthDate).toISOString().split('T')[0] : '',
         country: addressDetails?.country || '',
@@ -405,7 +405,7 @@ const Profile = () => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 ) : (
-                  <p className="text-gray-900 py-2">{userDetails?.phoneNumber || 'Belirtilmemiş'}</p>
+                  <p className="text-gray-900 py-2">{userDetails?.phoneNumber ? formatPhoneNumber(userDetails.phoneNumber) : 'Belirtilmemiş'}</p>
                 )}
               </div>
 
@@ -513,7 +513,7 @@ const Profile = () => {
 
           {/* Account Information */}
           <div className="mt-8 bg-white p-6 rounded-lg shadow-sm border">
-            <h2 className="text-20 font-semibold text-gray-900 mb-4">Hesap Bilgileri</h2>
+            <h2 className="text-20 font-semibold text-gray-900 mb-4">Kullanıcı Bilgileri</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <p className="text-sm text-gray-600">Kullanıcı ID</p>
@@ -528,7 +528,9 @@ const Profile = () => {
               <div>
                 <p className="text-sm text-gray-600">Kayıt Tarihi</p>
                 <p className="font-semibold">
-                  {userDetails?.dateCreated ? new Date(userDetails.dateCreated).toLocaleDateString('tr-TR') : 'Bilinmiyor'}
+                  {(userDetails?.registerDate || userDetails?.RegisterDate)
+                    ? new Date(userDetails?.registerDate || userDetails?.RegisterDate).toLocaleDateString('tr-TR')
+                    : 'Bilinmiyor'}
                 </p>
               </div>
               <div>

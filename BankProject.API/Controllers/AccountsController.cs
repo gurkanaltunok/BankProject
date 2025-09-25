@@ -57,9 +57,6 @@ namespace BankProject.API.Controllers
 
             var userId = int.Parse(userIdClaim.Value);
             var accounts = _accountService.GetAccountsByUserId(userId);
-            foreach (var account in accounts)
-            {
-            }
             return Ok(accounts);
         }
 
@@ -180,46 +177,7 @@ namespace BankProject.API.Controllers
         }
 
 
-        private async Task<decimal> GetCurrentExchangeRateAsync(string fromCurrency, string toCurrency)
-        {
-            try
-            {
-                var response = await _httpClient.GetStringAsync("https://api.exchangerate-api.com/v4/latest/TRY");
-                var jsonDoc = JsonDocument.Parse(response);
-                
-                if (jsonDoc.RootElement.TryGetProperty("rates", out var ratesElement))
-                {
-                    if (fromCurrency == "TRY")
-                    {
-                        var toRate = ratesElement.GetProperty(toCurrency).GetDecimal();
-                        return 1.0m / toRate;
-                    }
-                    else if (toCurrency == "TRY")
-                    {
-                        var fromRate = ratesElement.GetProperty(fromCurrency).GetDecimal();
-                        return 1.0m / fromRate;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-            }
-
-            var fallbackRates = new Dictionary<string, decimal>
-            {
-                { "TRY", 1.0m },
-                { "USD", 41.32m },
-                { "EUR", 44.85m },
-                { "GBP", 52.48m }
-            };
-
-            if (fallbackRates.ContainsKey(fromCurrency) && fallbackRates.ContainsKey(toCurrency))
-            {
-                return fallbackRates[toCurrency] / fallbackRates[fromCurrency];
-            }
-
-            return 1.0m;
-        }
+        // Removed unused GetCurrentExchangeRateAsync helper
     }
 }
 

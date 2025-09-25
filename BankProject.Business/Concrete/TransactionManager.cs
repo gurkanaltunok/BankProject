@@ -52,7 +52,7 @@ namespace BankProject.Business.Concrete
             };
         }
 
-        private async Task<(decimal rate, int exchangeRateId)> GetCurrentExchangeRateAsync(string fromCurrency, string toCurrency)
+        private Task<(decimal rate, int exchangeRateId)> GetCurrentExchangeRateAsync(string fromCurrency, string toCurrency)
         {
             decimal rate = 1.0m;
             int exchangeRateId = 0;
@@ -61,18 +61,18 @@ namespace BankProject.Business.Concrete
             {
                 rate = _exchangeRateService.ConvertCurrency(1.0m, fromCurrency, toCurrency);
 
-                // Mevcut günlük kur bilgisini al
+                // Kur bilgisi
                 var currentExchangeRate = _exchangeRateRepository.GetLatestExchangeRate();
                 exchangeRateId = currentExchangeRate?.ExchangeRateId ?? 0;
 
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 
-                throw new Exception($"Frankfurter API erişilemiyor. {fromCurrency} -> {toCurrency} dönüşümü yapılamıyor.");
+                throw new Exception($"API erişilemiyor. {fromCurrency} -> {toCurrency} dönüşümü yapılamıyor.");
             }
 
-            return (rate, exchangeRateId);
+            return Task.FromResult((rate, exchangeRateId));
         }
 
         private Transaction AddTransaction(int accountId, int? targetAccountId, decimal amount, decimal fee, int type, string description, decimal? balanceAfter = null, decimal? feeInTRY = null, int? exchangeRateId = null)
@@ -193,7 +193,6 @@ namespace BankProject.Business.Concrete
                 exchangeRateId = rateId;
             }
 
-            // Previous balances for history
             var fromPreviousBalance = fromAccount.Balance;
             var toPreviousBalance = toAccount.Balance;
             var bankPreviousBalance = bank.Balance;
@@ -210,7 +209,6 @@ namespace BankProject.Business.Concrete
 
             var bankFeeTx = AddTransaction(bank.AccountId, fromAccountId, feeInTRY, 0, (int)TransactionType.Fee, $"İşlem Ücreti - Hesap {fromAccountId}", bank.Balance);
 
-            // Record balance history for charts
             _balanceHistoryService.RecordBalanceChange(fromAccountId, fromPreviousBalance, fromAccount.Balance, -totalDebit, "Transfer - Giden", description, createdTransaction.TransactionId);
             _balanceHistoryService.RecordBalanceChange(toAccountId, toPreviousBalance, toAccount.Balance, amount, "Transfer - Gelen", description, createdTransaction.TransactionId);
             _balanceHistoryService.RecordBalanceChange(bank.AccountId, bankPreviousBalance, bank.Balance, feeInTRY, "Fee", $"İşlem Ücreti - Hesap {fromAccountId}", bankFeeTx.TransactionId);
@@ -234,14 +232,12 @@ namespace BankProject.Business.Concrete
         public List<Transaction> GetTransactionsByAccountId(int accountId)
         {
             var transactions = _transactionRepository.GetTransactionsByAccountId(accountId);
-            // Tüm transaction tiplerini döndür (fee ve exchange commission dahil)
             return transactions;
         }
 
         public List<Transaction> GetTransactionsByDateRange(DateTime? startDate, DateTime? endDate, int? accountId, int? userId = null)
         {
             var transactions = _transactionRepository.GetTransactionsByDateRange(startDate, endDate, accountId, userId);
-            // Tüm transaction tiplerini döndür (fee ve exchange commission dahil)
             return transactions;
         }
 
@@ -253,7 +249,7 @@ namespace BankProject.Business.Concrete
             return account.UserId == userId;
         }
 
-        public async Task<Transaction> ExchangeBuyAsync(ExchangeBuyDTO dto)
+        public Task<Transaction> ExchangeBuyAsync(ExchangeBuyDTO dto)
         {
             var tryAccount = GetActiveAccount(dto.FromAccountId);
             if (tryAccount.CurrencyType != CurrencyType.TRY)
@@ -286,7 +282,6 @@ namespace BankProject.Business.Concrete
             bankAccount.Balance += commission;
             _accountRepository.UpdateAccount(bankAccount);
 
-            // Mevcut günlük kur bilgisini al
             var currentExchangeRate = _exchangeRateRepository.GetLatestExchangeRate();
 
             var tryTransaction = new Transaction
@@ -326,10 +321,10 @@ namespace BankProject.Business.Concrete
             _balanceHistoryService.RecordBalanceChange(dto.ToAccountId, exchangeAccount.Balance - dto.AmountForeign, exchangeAccount.Balance, dto.AmountForeign, "Döviz Alış - Döviz Giriş", "Döviz Alış - Döviz Giriş", exchangeTransaction.TransactionId);
             _balanceHistoryService.RecordBalanceChange(bankAccount.AccountId, bankAccount.Balance - commission, bankAccount.Balance, commission, "Döviz Alış Komisyonu", $"Döviz Alış Komisyonu - Hesap {dto.FromAccountId}", bankFeeTx.TransactionId);
 
-            return tryTransaction;
+            return Task.FromResult(tryTransaction);
         }
 
-        public async Task<Transaction> ExchangeSellAsync(ExchangeSellDTO dto)
+        public Task<Transaction> ExchangeSellAsync(ExchangeSellDTO dto)
         {
             var exchangeAccount = GetActiveAccount(dto.FromAccountId);
             if (exchangeAccount.CurrencyType == CurrencyType.TRY)
@@ -399,7 +394,7 @@ namespace BankProject.Business.Concrete
             _balanceHistoryService.RecordBalanceChange(dto.ToAccountId, tryAccount.Balance - netAmount, tryAccount.Balance, netAmount, "Döviz Satış - TRY Giriş", "Döviz Satış - TRY Giriş", tryTransaction.TransactionId);
             _balanceHistoryService.RecordBalanceChange(bankAccount.AccountId, bankAccount.Balance - commission, bankAccount.Balance, commission, "Döviz Satış Komisyonu", $"Döviz Satış Komisyonu - Hesap {dto.FromAccountId}", bankFeeTx2.TransactionId);
 
-            return tryTransaction;
+            return Task.FromResult(tryTransaction);
         }
     }
 }

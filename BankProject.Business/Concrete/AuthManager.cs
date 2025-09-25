@@ -42,7 +42,8 @@ namespace BankProject.Business.Concrete
                 BirthDate = dto.BirthDate,
                 PasswordHash = hash,
                 PasswordSalt = salt,
-                RoleId = 1
+                RoleId = 1,
+                RegisterDate = DateTime.UtcNow
             };
 
             _userRepository.CreateUser(user);

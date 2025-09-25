@@ -11,12 +11,20 @@ import {
 } from "@/components/ui/sheet"
 import { sidebarLinks } from "@/constants"
 import { cn } from "@/lib/utils"
+import { useAuth } from "@/lib/auth-context"
 import Image from "next/image"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 
 const MobileNav = ({ user }: MobileNavProps) => {
   const pathname = usePathname();
+  const router = useRouter();
+  const { logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    router.push('/sign-in');
+  };
 
   return (
     <section className="w-fulll max-w-[264px]">
@@ -68,11 +76,18 @@ const MobileNav = ({ user }: MobileNavProps) => {
                 )
               })}
 
-              USER
+            <div className="mt-6 border-t border-gray-200 pt-4 px-4">
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2 w-full rounded-md px-3 py-2 hover:bg-gray-100 transition-colors"
+              >
+                <Image src="/icons/logout.svg" alt="Çıkış" width={18} height={18} />
+                <span className="text-sm font-medium text-gray-900">Çıkış Yap</span>
+              </button>
+            </div>
               </nav>
             </SheetClose>
-
-            FOOTER
+            
           </div>
         </SheetContent>
       </Sheet>

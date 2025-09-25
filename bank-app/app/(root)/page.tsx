@@ -16,7 +16,7 @@ const Home = () => {
   const { convertToTRY, rates } = useExchangeRates();
   const router = useRouter();
   const [displayBalance, setDisplayBalance] = useState(0);
-  const [displayCurrency, setDisplayCurrency] = useState<'TRY' | 'USD' | 'EUR'>('TRY');
+  const [displayCurrency, setDisplayCurrency] = useState<'TRY' | 'USD' | 'EUR' | 'GBP'>('TRY');
   const [totalBalanceInTRY, setTotalBalanceInTRY] = useState(0);
   const [isUpdatingBalance, setIsUpdatingBalance] = useState(false);
   
@@ -93,32 +93,19 @@ const Home = () => {
 
 
   useEffect(() => {
-    if (accounts.length === 0 || rates.length === 0) return;
+    if (rates.length === 0) return;
 
-    const totalBalanceTRY = accounts.reduce((sum, account) => {
-      const balance = account.balance || account.currentBalance || 0;
-      const currencyType = account.currencyType || 0;
-      
-      let convertedBalance = balance;
-      if (currencyType === 1) { // USD
-        const usdRate = rates.find(r => r.currency === 'USD')?.rate || 34.50;
-        convertedBalance = balance * usdRate;
-      } else if (currencyType === 2) { // EUR
-        const eurRate = rates.find(r => r.currency === 'EUR')?.rate || 37.20;
-        convertedBalance = balance * eurRate;
-      }
-      
-      return sum + convertedBalance;
-    }, 0);
-    
-    // Hedef değeri her zaman TRY bazlı hesapla; ekranda hangi para birimi seçiliyse ona çevirerek arttır
-    let target = totalBalanceTRY;
+    // Backend'in döndürdüğü toplam TRY değerini tek kaynak olarak kullan
+    let target = totalBalanceInTRY;
     if (displayCurrency === 'USD') {
       const usdRate = rates.find(r => r.currency === 'USD')?.rate || 34.50;
-      target = totalBalanceTRY / usdRate;
+      target = totalBalanceInTRY / usdRate;
     } else if (displayCurrency === 'EUR') {
       const eurRate = rates.find(r => r.currency === 'EUR')?.rate || 37.20;
-      target = totalBalanceTRY / eurRate;
+      target = totalBalanceInTRY / eurRate;
+    } else if (displayCurrency === 'GBP') {
+      const gbpRate = rates.find(r => r.currency === 'GBP')?.rate || 40.00;
+      target = totalBalanceInTRY / gbpRate;
     }
 
     const duration = 2000;
@@ -137,7 +124,7 @@ const Home = () => {
     }, duration / steps);
 
     return () => clearInterval(timer);
-  }, [accounts, rates, displayCurrency]);
+  }, [totalBalanceInTRY, rates, displayCurrency]);
 
   if (authLoading || accountsLoading) {
     return (
@@ -290,7 +277,7 @@ const Home = () => {
                 <div className="relative">
                   <button
                     onClick={() => {
-                      const currencies: ('TRY' | 'USD' | 'EUR')[] = ['TRY', 'USD', 'EUR'];
+                      const currencies: ('TRY' | 'USD' | 'EUR' | 'GBP')[] = ['TRY', 'USD', 'EUR', 'GBP'];
                       const currentIndex = currencies.indexOf(displayCurrency);
                       const nextIndex = (currentIndex + 1) % currencies.length;
                       setDisplayCurrency(currencies[nextIndex]);
@@ -305,7 +292,7 @@ const Home = () => {
                 </div>
               </div>
               <p className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
-                {displayCurrency === 'TRY' ? '₺' : displayCurrency === 'USD' ? '$' : '€'}
+                {displayCurrency === 'TRY' ? '₺' : displayCurrency === 'USD' ? '$' : displayCurrency === 'EUR' ? '€' : '£'}
                 {displayBalance.toLocaleString('tr-TR', {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2

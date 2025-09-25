@@ -256,31 +256,38 @@ export default function ExchangeTradingPage() {
           {/* İşlem Türü ve Hesap Seçimi */}
           <div className="space-y-6">
             {/* İşlem Türü Seçimi */}
-            <div className="bg-white rounded-2xl shadow-lg p-8">
-              <h2 className="text-xl font-semibold text-gray-900 mb-6 text-center">İşlem Türü Seçin</h2>
-              <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-                <button
-                  onClick={() => setTransactionType('buy')}
-                  className={`p-6 rounded-xl border-2 transition-all ${
-                    transactionType === 'buy'
-                      ? 'border-green-500 bg-green-50 text-green-700 shadow-md'
-                      : 'border-gray-200 hover:border-gray-300 hover:shadow-md'
-                  }`}
-                >
-                  <TrendingUp className="w-8 h-8 mx-auto mb-3" />
-                  <span className="font-semibold text-lg">Döviz Al</span>
-                </button>
-                <button
-                  onClick={() => setTransactionType('sell')}
-                  className={`p-6 rounded-xl border-2 transition-all ${
-                    transactionType === 'sell'
-                      ? 'border-red-500 bg-red-50 text-red-700 shadow-md'
-                      : 'border-gray-200 hover:border-gray-300 hover:shadow-md'
-                  }`}
-                >
-                  <TrendingDown className="w-8 h-8 mx-auto mb-3" />
-                  <span className="font-semibold text-lg">Döviz Sat</span>
-                </button>
+            <div className="bg-white rounded-2xl shadow-lg p-5">
+              <div className="flex items-center justify-center">
+                <div className="inline-flex gap-3 sm:gap-4">
+                  <button
+                    onClick={() => setTransactionType('buy')}
+                    className={`flex flex-col items-start sm:items-center sm:flex-row gap-1.5 sm:gap-3 px-5 py-3.5 rounded-xl border transition-all ${
+                      transactionType === 'buy'
+                        ? 'border-green-500 bg-green-50 text-green-700 shadow'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <TrendingUp className={`w-6 h-6 ${transactionType === 'buy' ? 'text-green-600' : 'text-gray-600'}`} />
+                    <div className="text-left sm:text-center">
+                      <div className="text-base font-semibold">Döviz Al</div>
+                      <div className="text-[12px] text-gray-500 leading-none">TRY → Döviz</div>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => setTransactionType('sell')}
+                    className={`flex flex-col items-start sm:items-center sm:flex-row gap-1.5 sm:gap-3 px-5 py-3.5 rounded-xl border transition-all ${
+                      transactionType === 'sell'
+                        ? 'border-red-500 bg-red-50 text-red-700 shadow'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <TrendingDown className={`w-6 h-6 ${transactionType === 'sell' ? 'text-red-600' : 'text-gray-600'}`} />
+                    <div className="text-left sm:text-center">
+                      <div className="text-base font-semibold">Döviz Sat</div>
+                      <div className="text-[12px] text-gray-500 leading-none">Döviz → TRY</div>
+                    </div>
+                  </button>
+                </div>
               </div>
             </div>
 

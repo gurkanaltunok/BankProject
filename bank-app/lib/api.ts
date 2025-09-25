@@ -227,26 +227,7 @@ class ApiService {
     return localStorage.getItem('token');
   }
 
-  displayTokenInfo(): void {
-    const token = this.getCurrentToken();
-    const userId = this.getCurrentUserId();
-    const roleId = localStorage.getItem('roleId');
-    
-    console.log('🔍 Current Token Info:');
-    console.log('🔑 Token:', token);
-    console.log('👤 User ID:', userId);
-    console.log('🔐 Role ID:', roleId);
-    
-    if (token) {
-      // JWT token'ı decode etmeye çalış (sadece payload kısmı)
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        console.log('📋 Token Payload:', payload);
-      } catch (e) {
-        console.log('❌ Token decode edilemedi');
-      }
-    }
-  }
+  // removed debug displayTokenInfo
 
   async validateToken(): Promise<boolean> {
     if (!this.isAuthenticated()) {

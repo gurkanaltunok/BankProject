@@ -32,6 +32,8 @@ namespace BankProject.Entities
         [Required]
         public DateTime BirthDate { get; set; }
 
+        public DateTime RegisterDate { get; set; }
+
         public int? AddressId { get; set; }
 
         [ForeignKey("AddressId")]

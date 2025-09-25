@@ -11,10 +11,12 @@ using System.Security.Claims;
 public class UsersController : ControllerBase
 {
     private readonly IUserService _userService;
+    private readonly IAccountService _accountService;
 
-    public UsersController(IUserService userService)
+    public UsersController(IUserService userService, IAccountService accountService)
     {
         _userService = userService;
+        _accountService = accountService;
     }
 
     [HttpGet]
@@ -48,6 +50,20 @@ public class UsersController : ControllerBase
         if (user == null)
             return NotFound();
 
+        DateTime? derivedRegisterDate = null;
+        if (user.RegisterDate == default)
+        {
+            try
+            {
+                var accounts = _accountService.GetAccountsByUserId(userId);
+                if (accounts != null && accounts.Count > 0)
+                {
+                    derivedRegisterDate = accounts.Min(a => a.DateCreated);
+                }
+            }
+            catch { }
+        }
+
         return Ok(new
         {
             id = user.Id,
@@ -57,8 +73,8 @@ public class UsersController : ControllerBase
             tckn = user.TCKN,
             phoneNumber = user.PhoneNumber,
             birthDate = user.BirthDate,
-            address = user.Address,
-            roleId = user.RoleId
+            roleId = user.RoleId,
+            registerDate = user.RegisterDate == default ? derivedRegisterDate : user.RegisterDate
         });
     }
 

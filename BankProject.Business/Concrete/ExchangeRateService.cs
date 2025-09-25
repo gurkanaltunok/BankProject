@@ -88,7 +88,7 @@ namespace BankProject.Business.Concrete
                     return amount * rate;
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
             }
 
@@ -133,7 +133,7 @@ namespace BankProject.Business.Concrete
                 
                 _cachedRates = new Dictionary<string, decimal>(); // Clear rates on API error
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 _cachedRates = new Dictionary<string, decimal>(); // Clear rates on exception
             }
@@ -150,18 +150,18 @@ namespace BankProject.Business.Concrete
             return 1.0m;
         }
 
-        private async Task SaveDailyRatesToDatabase()
+        private Task SaveDailyRatesToDatabase()
         {
             try
             {
-                // Türkiye saati (GMT+3) kullan
+                // Türkiye saati (GMT+3)
                 var turkeyTime = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Turkey Standard Time"));
                 var today = turkeyTime.Date;
                 
                 var todayRates = _exchangeRateRepository.GetExchangeRatesByDate(today);
                 if (todayRates.Any())
                 {
-                    return;
+                    return Task.CompletedTask;
                 }
 
                 // Tüm currency'lerin kurlarını tek satırda kaydet
@@ -178,12 +178,14 @@ namespace BankProject.Business.Concrete
                     _exchangeRateRepository.AddExchangeRate(exchangeRate);
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
             }
+
+            return Task.CompletedTask;
         }
 
-        public async Task<Dictionary<string, decimal>> GetPreviousDayRatesAsync()
+        public Task<Dictionary<string, decimal>> GetPreviousDayRatesAsync()
         {
             try
             {
@@ -198,11 +200,11 @@ namespace BankProject.Business.Concrete
                     rates["GBP"] = latestRate.GbpRate;
                 }
                 
-                return rates;
+                return Task.FromResult(rates);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                return new Dictionary<string, decimal>();
+                return Task.FromResult(new Dictionary<string, decimal>());
             }
         }
 
@@ -238,7 +240,7 @@ namespace BankProject.Business.Concrete
                 
                 return ratesWithChange;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return new Dictionary<string, decimal>();
             }

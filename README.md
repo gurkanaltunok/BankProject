@@ -123,20 +123,27 @@ NEXT_PUBLIC_API_URL=http://localhost:5020/api npm run dev
 - Recommended: HTTPS, rate limiting, centralized logging/telemetry
 
 ## Screenshots
-Real UI shots placed under `docs/screenshots/`:
+All images live under `docs/screenshots/`. Below is a structured gallery.
 
-<p>
-  <img src="docs/screenshots/homepage.png" alt="Homepage" width="45%" />
-  <img src="docs/screenshots/my-banks.png" alt="My Banks" width="45%" />
-</p>
+### Overview
+| Homepage | My Banks |
+|---|---|
+| ![Homepage](docs/screenshots/homepage.png) | ![My Banks](docs/screenshots/my-banks.png) |
 
-| Admin Panel | Exchange Trading | Exchange Confirm |
-|---|---|---|
-| ![Admin Panel](docs/screenshots/admin-panel.png) | ![Exchange](docs/screenshots/exchange-trading.png) | ![Confirm](docs/screenshots/exchange-confirm.png) |
-
-| Account | Payment/Transfer | Transactions |
+### Banking
+| Account | Payment / Transfer | Transaction History |
 |---|---|---|
 | ![Account](docs/screenshots/account.png) | ![Payment/Transfer](docs/screenshots/payment-transfer.png) | ![History](docs/screenshots/transaction-history.jpg) |
+
+### Exchange
+| Trading | Confirm |
+|---|---|
+| ![Exchange Trading](docs/screenshots/exchange-trading.png) | ![Exchange Confirm](docs/screenshots/exchange-confirm.png) |
+
+### Admin
+| Admin Panel |
+|---|
+| ![Admin Panel](docs/screenshots/admin-panel.png) |
 
 ## License
 MIT

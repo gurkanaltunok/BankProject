@@ -9,7 +9,7 @@ Full-Stack Banking Demo (ASP.NET Core + Next.js)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript)](#)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](#license)
 
-<sub>Multi-currency accounts, transactions, FX rates, and admin dashboards.</sub>
+<sub>Multi-currency accounts, transactions, currency rates, and admin dashboards.</sub>
 
 </div>
 

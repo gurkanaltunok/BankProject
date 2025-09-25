@@ -123,7 +123,20 @@ NEXT_PUBLIC_API_URL=http://localhost:5020/api npm run dev
 - Recommended: HTTPS, rate limiting, centralized logging/telemetry
 
 ## Screenshots
-> Add screenshots or GIFs of key screens (login, dashboard, exchange trading, profile)
+Real UI shots placed under `docs/screenshots/`:
+
+<p>
+  <img src="docs/screenshots/homepage.png" alt="Homepage" width="45%" />
+  <img src="docs/screenshots/my-banks.png" alt="My Banks" width="45%" />
+</p>
+
+| Admin Panel | Exchange Trading | Exchange Confirm |
+|---|---|---|
+| ![Admin Panel](docs/screenshots/admin-panel.png) | ![Exchange](docs/screenshots/exchange-trading.png) | ![Confirm](docs/screenshots/exchange-confirm.png) |
+
+| Account | Payment/Transfer | Transactions |
+|---|---|---|
+| ![Account](docs/screenshots/account.png) | ![Payment/Transfer](docs/screenshots/payment-transfer.png) | ![History](docs/screenshots/transaction-history.jpg) |
 
 ## License
 MIT

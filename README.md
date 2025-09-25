@@ -123,7 +123,7 @@ NEXT_PUBLIC_API_URL=http://localhost:5020/api npm run dev
 Tüm görseller `docs/screenshots/` altında. Aşağıda düzenli galeri bulunur.
 
 ### Genel Bakış
-| Ana Sayfa | Bankalarım |
+| Ana Sayfa | Hesaplarım |
 |---|---|
 | ![Homepage](docs/screenshots/homepage.png) | ![My Banks](docs/screenshots/my-banks.png) |
 
